@@ -1,28 +1,33 @@
-// LandingPage.jsx
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { v4 as uuidv4 } from "uuid";
-import landingPageImage from "./landing_page_image.png"; // Make sure this path is correct
 
 function LandingPage() {
   const [roomId, setRoomId] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
   const navigate = useNavigate();
 
   const handleJoinRoom = (e) => {
     e.preventDefault();
     if (roomId) {
+      setErrorMessage("");
       navigate(`/prejoin/${roomId}`);
     } else {
-      alert("Please enter a meeting code.");
+      setErrorMessage("Please enter a meeting code.");
     }
   };
 
+  const handleInstantMeeting = () => {
+    const newRoomId = uuidv4();
+    navigate(`/prejoin/${newRoomId}`);
+  };
+
   const handleSignUp = () => {
-    navigate("/signup"); // Navigate to Signup page
+    navigate("/signup");
   };
 
   const handleLogIn = () => {
-    navigate("/login"); // Navigate to Login page
+    navigate("/login");
   };
 
   return (
@@ -96,15 +101,15 @@ function LandingPage() {
           </button>
         </div>
 
-        {/* Meeting code input */}
+        {/* Meeting code input and instant meeting button */}
         <div style={{ marginTop: "2rem" }}>
           <h3 style={{ color: "#6D8A78", marginBottom: "0.5rem" }}>
             Meeting Code:
           </h3>
-          <form onSubmit={handleJoinRoom}>
+          <form onSubmit={handleJoinRoom} style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
             <input
               type="text"
-              placeholder=""
+              placeholder="Enter meeting code"
               value={roomId}
               onChange={(e) => setRoomId(e.target.value)}
               style={{
@@ -117,8 +122,39 @@ function LandingPage() {
                 color: "white",
               }}
             />
+            <button
+              type="submit"
+              style={{
+                padding: "0.5rem 2rem",
+                fontSize: "1rem",
+                borderRadius: "5px",
+                border: "1px solid #E8E7E5",
+                backgroundColor: "#1D2C2A",
+                color: "#E8E7E5",
+                cursor: "pointer",
+              }}
+            >
+              Join
+            </button>
           </form>
+          {errorMessage && <p style={{ color: "#FF6347", marginTop: "0.5rem" }}>{errorMessage}</p>}
         </div>
+
+        <button
+          onClick={handleInstantMeeting}
+          style={{
+            marginTop: "2rem",
+            padding: "0.75rem 2.5rem",
+            fontSize: "1.2rem",
+            borderRadius: "5px",
+            border: "none",
+            backgroundColor: "#6D8A78",
+            color: "white",
+            cursor: "pointer",
+          }}
+        >
+          Start instant meeting
+        </button>
       </div>
 
       {/* Right section for the image */}
@@ -132,7 +168,7 @@ function LandingPage() {
         }}
       >
         <img
-          src={landingPageImage}
+          src="https://placehold.co/600x400/2e4242/fff?text=Video+Call"
           alt="Video call interface"
           style={{
             width: "90%",

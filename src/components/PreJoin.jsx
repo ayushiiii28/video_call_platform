@@ -1,4 +1,3 @@
-// PreJoin.js
 import React, { useState, useRef, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
@@ -6,24 +5,66 @@ function PreJoin() {
   const { roomId } = useParams();
   const [name, setName] = useState("");
   const [stream, setStream] = useState(null);
+  const [cameraOn, setCameraOn] = useState(true);
+  const [micOn, setMicOn] = useState(true);
+  const [errorMessage, setErrorMessage] = useState("");
   const userVideo = useRef();
   const navigate = useNavigate();
 
   useEffect(() => {
+    let currentStream = null;
     navigator.mediaDevices.getUserMedia({ video: true, audio: true })
       .then((mediaStream) => {
+        currentStream = mediaStream;
         setStream(mediaStream);
-        userVideo.current.srcObject = mediaStream;
+        if (userVideo.current) {
+          userVideo.current.srcObject = mediaStream;
+        }
       })
       .catch((error) => {
         console.error("Error accessing media devices.", error);
-        alert("Please allow camera and microphone access to join the room.");
+        setErrorMessage("Please allow camera and microphone access to join the room.");
       });
-  }, []);
+
+    // Cleanup function to stop the stream when the component unmounts
+    return () => {
+      if (currentStream) {
+        currentStream.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, []); // Empty dependency array ensures this effect runs only once
+
+  // Toggle Camera
+  const toggleCamera = () => {
+    if (stream) {
+      const videoTrack = stream.getVideoTracks()[0];
+      if (videoTrack) {
+        videoTrack.enabled = !videoTrack.enabled;
+        setCameraOn(videoTrack.enabled);
+      }
+    }
+  };
+
+  // Toggle Microphone
+  const toggleMic = () => {
+    if (stream) {
+      const audioTrack = stream.getAudioTracks()[0];
+      if (audioTrack) {
+        audioTrack.enabled = !audioTrack.enabled;
+        setMicOn(audioTrack.enabled);
+      }
+    }
+  };
 
   const joinRoom = () => {
-    if (!name) return alert("Enter your name");
-    navigate(`/room/${roomId}`, { state: { name, stream } });
+    if (!name) {
+      setErrorMessage("Please enter your name.");
+      return;
+    }
+    setErrorMessage("");
+    // We are no longer passing the stream via state, as it's not a reliable method.
+    // The next component will be responsible for re-acquiring the media stream.
+    navigate(`/room/${roomId}`, { state: { name, cameraOn, micOn } });
   };
 
   return (
@@ -48,7 +89,7 @@ function PreJoin() {
         }}
       >
         <div style={{ padding: "0.5rem 1rem", backgroundColor: "#1E1F21", color: "white" }}>
-          Meeting Code
+          Meeting Code: {roomId}
         </div>
         <div style={{ padding: "0.5rem 1rem", backgroundColor: "#1E1F21", color: "white" }}>
           Meeting Title
@@ -81,9 +122,7 @@ function PreJoin() {
           }}
         >
           <h3 style={{ margin: "0 0 1rem 0", color: "#93B294" }}>Already in meet:</h3>
-          <div style={{ width: "100%", height: "80px", backgroundColor: "#1E1F21", borderRadius: "5px", marginBottom: "1rem" }}>
-            {/* Placeholder for joined participants */}
-          </div>
+          <div style={{ width: "100%", height: "80px", backgroundColor: "#1E1F21", borderRadius: "5px", marginBottom: "1rem" }} />
           <label style={{ color: "white", marginBottom: "0.5rem" }}>Enter Name</label>
           <input
             type="text"
@@ -105,9 +144,7 @@ function PreJoin() {
             Remember your name
           </label>
           <h3 style={{ margin: "0 0 0.5rem 0", color: "#93B294" }}>Background</h3>
-          <div style={{ width: "100%", height: "100px", border: "1px solid #93B294", backgroundColor: "#1E1F21", borderRadius: "5px" }}>
-            {/* Background preview */}
-          </div>
+          <div style={{ width: "100%", height: "100px", border: "1px solid #93B294", backgroundColor: "#1E1F21", borderRadius: "5px" }} />
         </div>
 
         {/* Central Video Section */}
@@ -125,12 +162,7 @@ function PreJoin() {
             boxShadow: "0 4px 10px rgba(0,0,0,0.5)",
           }}
         >
-          <video
-            ref={userVideo}
-            autoPlay
-            muted
-            style={{ width: "100%", height: "auto", display: "block" }}
-          />
+          <video ref={userVideo} autoPlay muted style={{ width: "100%", height: "auto", display: "block" }} />
         </div>
 
         {/* Right Sidebar */}
@@ -160,21 +192,62 @@ function PreJoin() {
             <option>Spanish</option>
             <option>French</option>
           </select>
+
+          {/* Camera Toggle */}
           <label style={{ color: "white", marginBottom: "0.5rem" }}>Camera</label>
-          <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "1rem" }}>
-            <span>On</span>
-            <div style={{ width: "40px", height: "20px", backgroundColor: "#93B294", borderRadius: "20px" }}>
-              {/* Toggle switch placeholder */}
-            </div>
-            <span>Off</span>
+          <div
+            onClick={toggleCamera}
+            style={{
+              cursor: "pointer",
+              width: "50px",
+              height: "25px",
+              borderRadius: "20px",
+              backgroundColor: cameraOn ? "#4caf50" : "#ccc",
+              position: "relative",
+              marginBottom: "1rem",
+              transition: "background-color 0.2s",
+            }}
+          >
+            <div
+              style={{
+                width: "23px",
+                height: "23px",
+                borderRadius: "50%",
+                backgroundColor: "white",
+                position: "absolute",
+                top: "1px",
+                left: cameraOn ? "26px" : "1px",
+                transition: "all 0.2s",
+              }}
+            />
           </div>
+
+          {/* Microphone Toggle */}
           <label style={{ color: "white", marginBottom: "0.5rem" }}>Microphone</label>
-          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-            <span>On</span>
-            <div style={{ width: "40px", height: "20px", backgroundColor: "#93B294", borderRadius: "20px" }}>
-              {/* Toggle switch placeholder */}
-            </div>
-            <span>Off</span>
+          <div
+            onClick={toggleMic}
+            style={{
+              cursor: "pointer",
+              width: "50px",
+              height: "25px",
+              borderRadius: "20px",
+              backgroundColor: micOn ? "#4caf50" : "#ccc",
+              position: "relative",
+              transition: "background-color 0.2s",
+            }}
+          >
+            <div
+              style={{
+                width: "23px",
+                height: "23px",
+                borderRadius: "50%",
+                backgroundColor: "white",
+                position: "absolute",
+                top: "1px",
+                left: micOn ? "26px" : "1px",
+                transition: "all 0.2s",
+              }}
+            />
           </div>
         </div>
       </div>
@@ -218,6 +291,7 @@ function PreJoin() {
           </button>
         </div>
       </div>
+      {errorMessage && <p style={{ color: "#FF6347", textAlign: "center", marginTop: "1rem" }}>{errorMessage}</p>}
     </div>
   );
 }
