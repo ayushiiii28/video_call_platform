@@ -25,6 +25,16 @@ function PreJoin() {
   const sourceNodeRef = useRef(null);
   const gainNodeRef = useRef(null);
 
+  // Use state to manage the list of joined users dynamically
+  const [joinedUsers, setJoinedUsers] = useState([]);
+
+  // Mock data for joined users
+  const mockJoinedUsers = [
+    { name: "Alex", avatar: "https://placehold.co/100x100/A0E7E5/ffffff?text=A" },
+    { name: "Jordan", avatar: "https://placehold.co/100x100/C4A7E5/ffffff?text=J" },
+    { name: "Taylor", avatar: "https://placehold.co/100x100/FFD8C9/ffffff?text=T" },
+  ];
+
   // Function to get the media stream with specific constraints
   const getStream = useCallback(async (micId) => {
     try {
@@ -99,7 +109,13 @@ function PreJoin() {
     };
     getDevices();
 
+    // Simulate other users joining after a delay
+    const timer = setTimeout(() => {
+      setJoinedUsers(mockJoinedUsers);
+    }, 3000); // 3-second delay
+
     return () => {
+      clearTimeout(timer);
       if (stream) {
         stream.getTracks().forEach(track => track.stop());
       }
@@ -107,7 +123,7 @@ function PreJoin() {
         audioContextRef.current.close();
       }
     };
-  }, [getStream]);
+  }, [getStream, mockJoinedUsers]);
 
   const toggleCamera = () => {
     if (stream) {
@@ -195,7 +211,24 @@ function PreJoin() {
         {/* Left Sidebar */}
         <div className="flex flex-col items-start p-4 bg-[#2E4242] rounded-xl shadow-lg w-full md:w-1/4 min-w-[200px] space-y-4">
           <h3 className="text-xl font-semibold">Already in meet:</h3>
-          <div className="w-full h-20 bg-[#1E1F21] rounded-lg mb-4" />
+          <div className="w-full flex flex-col items-center justify-center p-4 bg-[#1E1F21] rounded-lg mb-4">
+            {joinedUsers.length > 0 ? (
+              <>
+                <div className="flex justify-center -space-x-4 mb-2">
+                  {joinedUsers.slice(0, 3).map((user, index) => (
+                    <div key={index} className="w-12 h-12 rounded-full border-2 border-[#1E1F21] overflow-hidden">
+                      <img src={user.avatar} alt={`${user.name}'s avatar`} className="object-cover w-full h-full" />
+                    </div>
+                  ))}
+                </div>
+                <div className="text-center text-sm">
+                  {joinedUsers.map(user => user.name).join(', ')} and more
+                </div>
+              </>
+            ) : (
+              <div className="text-center text-sm">You'll be the first to join!</div>
+            )}
+          </div>
           <label className="text-white font-medium">Enter Name</label>
           <input
             type="text"
