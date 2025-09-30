@@ -1,15 +1,14 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
+import ChatBox from "./ChatBox";
+import ScreenShare from "./ScreenShare";
+import Recording from "./Recording";
 
-// Load Tailwind CSS from CDN and Font Awesome for icons
-const tailwindScript = document.createElement("script");
-tailwindScript.src = "https://cdn.tailwindcss.com";
-document.head.appendChild(tailwindScript);
-
-const fontAwesomeScript = document.createElement("script");
-fontAwesomeScript.src = "https://kit.fontawesome.com/a86f990772.js";
-fontAwesomeScript.crossOrigin = "anonymous";
-document.head.appendChild(fontAwesomeScript);
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { 
+  faSmileWink, faUpload, faHandPaper, faVideo, faMicrophone, 
+  faCommentDots, faDesktop, faUserFriends, faCog, faEllipsisV, faShareAlt 
+} from '@fortawesome/free-solid-svg-icons';
 
 function Room() {
   const { roomId } = useParams();
@@ -18,51 +17,44 @@ function Room() {
   const { name, cameraOn, micOn } = location.state || {};
   const [stream, setStream] = useState(null);
   const userVideo = useRef();
-  const [errorMessage, setErrorMessage] = useState("");
   const [participants, setParticipants] = useState([]);
   const [pendingParticipants, setPendingParticipants] = useState([]);
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [isScreenSharing, setIsScreenSharing] = useState(false);
 
-  // Mock data for new join requests
   const mockJoinRequests = [
     { id: 101, name: "Jessica", videoUrl: "https://placehold.co/600x400/98E7A0/ffffff?text=Jessica" },
     { id: 102, name: "Michael", videoUrl: "https://placehold.co/600x400/81B4AE/ffffff?text=Michael" },
   ];
 
+  // Get user media
   useEffect(() => {
-    // If we don't have the user's name, redirect them back to the pre-join screen.
     if (!name) {
       navigate(`/prejoin/${roomId}`);
       return;
     }
 
-    // Add the current user as the first participant
     setParticipants([{ id: 'me', name: name, stream: null }]);
 
     let currentStream = null;
+
     navigator.mediaDevices.getUserMedia({ video: cameraOn, audio: micOn })
       .then((mediaStream) => {
         currentStream = mediaStream;
         setStream(mediaStream);
-        if (userVideo.current) {
-          userVideo.current.srcObject = mediaStream;
-        }
+        if (userVideo.current) userVideo.current.srcObject = mediaStream;
       })
       .catch((error) => {
-        console.error("Error accessing media devices in room.", error);
-        setErrorMessage("Could not access your camera or microphone. Please ensure permissions are granted and try again.");
+        console.error("Error accessing media devices.", error);
       });
 
-    // Simulate new users trying to join after a delay
     const joinRequestTimer = setTimeout(() => {
       setPendingParticipants(mockJoinRequests);
-    }, 5000); // 5-second delay
+    }, 5000);
 
-    // Cleanup function to stop the stream and timers when the component unmounts
     return () => {
       clearTimeout(joinRequestTimer);
-      if (currentStream) {
-        currentStream.getTracks().forEach(track => track.stop());
-      }
+      if (currentStream) currentStream.getTracks().forEach(track => track.stop());
     };
   }, [name, cameraOn, micOn, roomId, navigate]);
 
@@ -75,9 +67,8 @@ function Room() {
     setPendingParticipants(prev => prev.filter(user => user.id !== userToDeny.id));
   };
 
-  const videoGridClass = participants.length > 1
-    ? "flex-1 p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 justify-center items-center"
-    : "flex-1 p-4 flex justify-center items-center";
+  const toggleChat = () => setIsChatOpen(prev => !prev);
+  const toggleScreenShare = () => setIsScreenSharing(prev => !prev);
 
   return (
     <div className="flex flex-col h-screen w-screen bg-[#1D2C2A] text-[#E8E7E5] font-sans">
@@ -85,89 +76,103 @@ function Room() {
       <div className="flex justify-between items-center p-4 bg-[#1E1F21] flex-shrink-0">
         <div className="flex items-center space-x-2 p-2 bg-[#1E1F21] text-white font-bold">
           <span>Meeting Code: {roomId}</span>
-          <i className="fas fa-share-alt"></i>
+          <FontAwesomeIcon icon={faShareAlt} />
         </div>
-        <div className="p-2 bg-[#1E1F21] text-white font-bold">
-          Meeting Title
-        </div>
-        <div className="p-2 bg-[#1E1F21] text-white font-bold">
-          Host Name
-        </div>
+        <div className="p-2 bg-[#1E1F21] text-white font-bold">Meeting Title</div>
+        <div className="p-2 bg-[#1E1F21] text-white font-bold">Host Name</div>
       </div>
 
-      {/* Main Content Area - Video Grid and Controls */}
+      {/* Main Content */}
       <div className="flex flex-1 overflow-hidden">
-        {/* Left Sidebar for Controls */}
-        <div className="flex flex-col w-[60px] p-2 bg-[#1E1F21] items-center justify-between">
-          <div className="flex flex-col items-center space-y-4">
+        {/* Left Sidebar */}
+        <div className="flex flex-col w-[60px] p-2 bg-[#1E1F21] items-center justify-between flex-shrink-0 h-full">
+          <div className="flex flex-col items-center space-y-4 mt-4">
             <button className="text-gray-400 text-2xl hover:text-white transition-colors duration-200">
-              <i className="far fa-smile-wink"></i>
+              <FontAwesomeIcon icon={faSmileWink} />
             </button>
             <button className="text-gray-400 text-2xl hover:text-white transition-colors duration-200">
-              <i className="fas fa-upload"></i>
+              <FontAwesomeIcon icon={faUpload} />
             </button>
             <button className="text-gray-400 text-2xl hover:text-white transition-colors duration-200">
-              <i className="fas fa-hand-paper"></i>
+              <FontAwesomeIcon icon={faHandPaper} />
             </button>
             <button className="text-gray-400 text-2xl hover:text-white transition-colors duration-200">
-              <i className="fas fa-video"></i>
+              <FontAwesomeIcon icon={faVideo} />
             </button>
             <button className="text-gray-400 text-2xl hover:text-white transition-colors duration-200">
-              <i className="fas fa-microphone"></i>
+              <FontAwesomeIcon icon={faMicrophone} />
             </button>
+
+            {/* ScreenShare */}
+            <button
+              onClick={toggleScreenShare}
+              className={`text-2xl transition-colors duration-200 ${isScreenSharing ? 'text-white' : 'text-gray-400 hover:text-white'}`}
+              title="Screen Share"
+            >
+              <FontAwesomeIcon icon={faDesktop} />
+            </button>
+
+            {/* Chat */}
+            <button
+              onClick={toggleChat}
+              className={`text-2xl transition-colors duration-200 ${isChatOpen ? 'text-white' : 'text-gray-400 hover:text-white'}`}
+              title="Chat"
+            >
+              <FontAwesomeIcon icon={faCommentDots} />
+            </button>
+
+            {/* Recording */}
+            <Recording stream={stream} />
           </div>
+
+          {/* Leave Button */}
           <button
             onClick={() => {
-              if (stream) {
-                stream.getTracks().forEach(track => track.stop());
-              }
+              if (stream) stream.getTracks().forEach(track => track.stop());
               navigate(`/prejoin/${roomId}`);
             }}
             className="w-full p-2 bg-red-600 text-white font-bold rounded-lg transition-colors duration-200 hover:bg-red-700"
           >
             Leave
           </button>
-          <div className="flex flex-col items-center space-y-4">
+
+          <div className="flex flex-col items-center space-y-4 mb-4">
             <button className="text-gray-400 text-2xl hover:text-white transition-colors duration-200">
-              <i className="fas fa-user-friends"></i>
+              <FontAwesomeIcon icon={faUserFriends} />
             </button>
             <button className="text-gray-400 text-2xl hover:text-white transition-colors duration-200">
-              <i className="fas fa-cog"></i>
+              <FontAwesomeIcon icon={faCog} />
             </button>
             <button className="text-gray-400 text-2xl hover:text-white transition-colors duration-200">
-              <i className="fas fa-ellipsis-v"></i>
+              <FontAwesomeIcon icon={faEllipsisV} />
             </button>
           </div>
         </div>
 
         {/* Video Grid */}
-        <div className={videoGridClass}>
-          {/* User's own video */}
-          {participants.find(p => p.id === 'me') && (
-            <div className={`relative w-full h-full flex flex-col items-center justify-center rounded-xl overflow-hidden shadow-2xl aspect-video bg-[#1E1F21] ${participants.length === 1 ? 'w-full h-full' : ''}`}>
-              <video ref={userVideo} autoPlay muted playsInline className="w-full h-full object-cover rounded-xl" />
-              <div className="absolute bottom-4 left-4 text-white bg-black bg-opacity-50 px-2 py-1 rounded-md text-lg">
-                {name}
-              </div>
-              {errorMessage && (
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 p-4 bg-red-600 bg-opacity-80 text-white rounded-lg shadow-lg text-center">
-                  {errorMessage}
-                </div>
+        <div className={`flex-1 transition-all duration-300 ${isChatOpen ? 'mr-80' : 'mr-0'} p-4 flex flex-wrap justify-center gap-4`}>
+          {participants.map(user => (
+            <div key={user.id} className="relative w-full md:w-80 h-60 rounded-xl overflow-hidden shadow-2xl bg-[#1E1F21]">
+              {user.id === 'me' ? (
+                <video ref={userVideo} autoPlay muted playsInline className="w-full h-full object-cover" />
+              ) : (
+                <img src={user.videoUrl} alt={user.name} className="w-full h-full object-cover" />
               )}
-            </div>
-          )}
-
-          {/* Other admitted participants' videos */}
-          {participants.filter(p => p.id !== 'me').map(user => (
-            <div key={user.id} className="relative w-full h-full flex flex-col items-center justify-center rounded-xl overflow-hidden shadow-2xl aspect-video bg-[#1E1F21]">
-              <img src={user.videoUrl} alt={`${user.name}'s video`} className="w-full h-full object-cover rounded-xl" />
-              <div className="absolute bottom-4 left-4 text-white bg-black bg-opacity-50 px-2 py-1 rounded-md text-lg">
-                {user.name}
-              </div>
+              <div className="absolute bottom-2 left-2 text-white bg-black bg-opacity-50 px-2 py-1 rounded-md text-sm">{user.name}</div>
             </div>
           ))}
         </div>
+
+        {/* ChatBox Sidebar */}
+        {isChatOpen && (
+          <div className="absolute top-0 right-0 h-full w-80 z-40 transition-transform duration-300">
+            <ChatBox />
+          </div>
+        )}
       </div>
+
+      {/* ScreenShare Overlay */}
+      {isScreenSharing && <ScreenShare stream={stream} />}
 
       {/* Admission Dialog */}
       {pendingParticipants.length > 0 && (
@@ -177,22 +182,12 @@ function Room() {
             {pendingParticipants.map(user => (
               <div key={user.id} className="flex items-center justify-between p-4 bg-[#1E1F21] rounded-lg mb-2">
                 <div className="flex items-center space-x-4">
-                  <img src={user.videoUrl} alt={`${user.name}'s avatar`} className="w-12 h-12 rounded-full object-cover" />
+                  <img src={user.videoUrl} alt={user.name} className="w-12 h-12 rounded-full object-cover" />
                   <span className="text-lg">{user.name} wants to join.</span>
                 </div>
                 <div className="space-x-2">
-                  <button
-                    onClick={() => handleAdmit(user)}
-                    className="px-4 py-2 bg-green-600 rounded-lg font-semibold hover:bg-green-700 transition-colors"
-                  >
-                    Admit
-                  </button>
-                  <button
-                    onClick={() => handleDeny(user)}
-                    className="px-4 py-2 bg-red-600 rounded-lg font-semibold hover:bg-red-700 transition-colors"
-                  >
-                    Deny
-                  </button>
+                  <button onClick={() => handleAdmit(user)} className="px-4 py-2 bg-green-600 rounded-lg font-semibold hover:bg-green-700 transition-colors">Admit</button>
+                  <button onClick={() => handleDeny(user)} className="px-4 py-2 bg-red-600 rounded-lg font-semibold hover:bg-red-700 transition-colors">Deny</button>
                 </div>
               </div>
             ))}
