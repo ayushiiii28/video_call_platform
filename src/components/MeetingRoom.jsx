@@ -20,6 +20,7 @@ function Room() {
   const [participants, setParticipants] = useState([]);
   const [pendingParticipants, setPendingParticipants] = useState([]);
   const [isChatOpen, setIsChatOpen] = useState(false);
+  const [isParticipantsOpen, setIsParticipantsOpen] = useState(false);
   const [isScreenSharing, setIsScreenSharing] = useState(false);
 
   const mockJoinRequests = [
@@ -68,6 +69,7 @@ function Room() {
   };
 
   const toggleChat = () => setIsChatOpen(prev => !prev);
+  const toggleParticipants = () => setIsParticipantsOpen(prev => !prev);
   const toggleScreenShare = () => setIsScreenSharing(prev => !prev);
 
   return (
@@ -83,7 +85,7 @@ function Room() {
       </div>
 
       {/* Main Content */}
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 overflow-hidden relative">
         {/* Left Sidebar */}
         <div className="flex flex-col w-[60px] p-2 bg-[#1E1F21] items-center justify-between flex-shrink-0 h-full">
           <div className="flex flex-col items-center space-y-4 mt-4">
@@ -121,6 +123,15 @@ function Room() {
               <FontAwesomeIcon icon={faCommentDots} />
             </button>
 
+            {/* Participants */}
+            <button
+              onClick={toggleParticipants}
+              className={`text-2xl transition-colors duration-200 ${isParticipantsOpen ? 'text-white' : 'text-gray-400 hover:text-white'}`}
+              title="Participants"
+            >
+              <FontAwesomeIcon icon={faUserFriends} />
+            </button>
+
             {/* Recording */}
             <Recording stream={stream} />
           </div>
@@ -138,9 +149,6 @@ function Room() {
 
           <div className="flex flex-col items-center space-y-4 mb-4">
             <button className="text-gray-400 text-2xl hover:text-white transition-colors duration-200">
-              <FontAwesomeIcon icon={faUserFriends} />
-            </button>
-            <button className="text-gray-400 text-2xl hover:text-white transition-colors duration-200">
               <FontAwesomeIcon icon={faCog} />
             </button>
             <button className="text-gray-400 text-2xl hover:text-white transition-colors duration-200">
@@ -150,23 +158,45 @@ function Room() {
         </div>
 
         {/* Video Grid */}
-        <div className={`flex-1 transition-all duration-300 ${isChatOpen ? 'mr-80' : 'mr-0'} p-4 flex flex-wrap justify-center gap-4`}>
-          {participants.map(user => (
-            <div key={user.id} className="relative w-full md:w-80 h-60 rounded-xl overflow-hidden shadow-2xl bg-[#1E1F21]">
-              {user.id === 'me' ? (
-                <video ref={userVideo} autoPlay muted playsInline className="w-full h-full object-cover" />
-              ) : (
-                <img src={user.videoUrl} alt={user.name} className="w-full h-full object-cover" />
-              )}
-              <div className="absolute bottom-2 left-2 text-white bg-black bg-opacity-50 px-2 py-1 rounded-md text-sm">{user.name}</div>
-            </div>
-          ))}
+        <div className={`flex-1 relative p-2 h-full transition-all duration-300`} style={{ marginRight: isChatOpen || isParticipantsOpen ? '20rem' : '0' }}>
+          <div
+            className="grid gap-2 w-full h-full"
+            style={{
+              gridTemplateColumns: `repeat(${Math.ceil(Math.sqrt(participants.length))}, 1fr)`,
+              gridAutoRows: '1fr',
+            }}
+          >
+            {participants.map(user => (
+              <div key={user.id} className="relative w-full h-full rounded-xl overflow-hidden shadow-2xl bg-[#1E1F21]">
+                {user.id === 'me' ? (
+                  <video ref={userVideo} autoPlay muted playsInline className="w-full h-full object-cover" />
+                ) : (
+                  <img src={user.videoUrl} alt={user.name} className="w-full h-full object-cover" />
+                )}
+                <div className="absolute bottom-2 left-2 text-white bg-black bg-opacity-50 px-2 py-1 rounded-md text-sm">
+                  {user.name}
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
 
         {/* ChatBox Sidebar */}
         {isChatOpen && (
           <div className="absolute top-0 right-0 h-full w-80 z-40 transition-transform duration-300">
             <ChatBox />
+          </div>
+        )}
+
+        {/* Participants Sidebar */}
+        {isParticipantsOpen && (
+          <div className="absolute top-0 right-0 h-full w-80 z-40 bg-[#1E1F21] shadow-lg p-4 transition-transform duration-300 overflow-y-auto">
+            <h2 className="text-white text-lg font-bold mb-4">Participants</h2>
+            {participants.map(user => (
+              <div key={user.id} className="flex items-center mb-2 p-2 bg-[#2E4242] rounded-lg">
+                <span className="text-white">{user.name}</span>
+              </div>
+            ))}
           </div>
         )}
       </div>
