@@ -6,9 +6,9 @@ import Recording from "./Recording";
 
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { 
-  faSmileWink, faUpload, faHandPaper, faVideo, faMicrophone, 
-  faCommentDots, faDesktop, faUserFriends, faCog, faEllipsisV, faShareAlt 
-} from '@fortawesome/free-solid-svg-icons';
+  faSmileWink, faHandPaper, faVideo, faMicrophone, 
+  faCommentDots, faDesktop, faUserFriends, faCog, faShareAlt 
+} from '@fortawesome/free-solid-svg-icons'; // Note: faUpload and faEllipsisV are removed
 
 function Room() {
   const { roomId } = useParams();
@@ -24,6 +24,9 @@ function Room() {
   const [isScreenSharing, setIsScreenSharing] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isParticipantsOpen, setIsParticipantsOpen] = useState(false);
+  
+  // NEW STATE for Hand Raise feature
+  const [isHandRaised, setIsHandRaised] = useState(false); 
 
   const [camera, setCamera] = useState(cameraOn ?? true);
   const [mic, setMic] = useState(micOn ?? true);
@@ -41,6 +44,7 @@ function Room() {
   const mockJoinRequests = [
     { id: 101, name: "Jessica", videoUrl: "https://placehold.co/600x400/98E7A0/ffffff?text=Jessica" },
     { id: 102, name: "Michael", videoUrl: "https://placehold.co/600x400/81B4AE/ffffff?text=Michael" },
+    { id: 103, name: "Charlie", videoUrl: "https://placehold.co/600x400/FFD700/000000?text=Charlie" },
   ];
 
   // Get user media and devices (unchanged logic)
@@ -103,7 +107,12 @@ function Room() {
     getDevices();
     getStream(selectedMic);
     
-    const joinRequestTimer = setTimeout(() => setPendingParticipants(mockJoinRequests), 5000);
+    // Simulate multiple participants joining for testing the grid
+    const joinRequestTimer = setTimeout(() => {
+        setPendingParticipants(mockJoinRequests);
+        // Admit one more user to test a 3-person grid
+        setParticipants(prev => [...prev, mockJoinRequests[0]]);
+    }, 5000);
 
     return () => {
       clearTimeout(joinRequestTimer);
@@ -117,6 +126,20 @@ function Room() {
   const toggleScreenShare = () => setIsScreenSharing(prev => !prev);
   const toggleSettings = () => setIsSettingsOpen(prev => !prev);
   const toggleParticipants = () => setIsParticipantsOpen(prev => !prev);
+
+  // NEW: Reaction & Hand Raise Functions
+  const sendReaction = (reaction) => {
+    console.log(`Sending reaction: ${reaction}`);
+    // In a real application, this would send a message to the signaling server
+    // which would trigger an animation/overlay on all participants' screens.
+    alert(`You sent a ${reaction}! (Placeholder action)`);
+  };
+
+  const toggleHandRaise = () => {
+    setIsHandRaised(prev => !prev);
+    console.log(`Hand is now ${!isHandRaised ? 'raised' : 'lowered'}`);
+    // In a real application, this would update the participant's status on the server
+  };
 
   const toggleCamera = () => {
     if (stream) {
@@ -165,7 +188,7 @@ function Room() {
   };
   const handleDeny = (userToDeny) => setPendingParticipants(prev => prev.filter(u => u.id !== userToDeny.id));
 
-  // Function to determine GRID CONTAINER classes based on participant count
+  // Function to determine GRID CONTAINER classes based on participant count (UNCHANGED)
   const getGridContainerClass = (count) => {
     if (count === 1) {
         // Single user: Use flexbox for full-screen centering
@@ -188,7 +211,7 @@ function Room() {
     }
   };
 
-  // Function to determine GRID ITEM classes
+  // Function to determine GRID ITEM classes (UNCHANGED)
   const getGridItemClass = (count) => {
       const baseClasses = "relative bg-[#1E1F21] rounded-xl overflow-hidden shadow-2xl w-full h-full";
       
@@ -218,18 +241,40 @@ function Room() {
 
       {/* Main Content */}
       <div className="flex flex-1 overflow-hidden">
-        {/* Left Sidebar - Minimized (unchanged) */}
+        {/* Left Sidebar - UPDATED ICONS */}
         <div className="flex flex-col w-[50px] p-1 bg-[#1E1F21] items-center justify-between flex-shrink-0 h-full">
           {/* Top Icons */}
           <div className="flex flex-col items-center space-y-2 mt-2">
-            <button className="text-gray-400 text-xl hover:text-white transition-colors duration-200" title="Reactions"><FontAwesomeIcon icon={faSmileWink} /></button>
-            <button className="text-gray-400 text-xl hover:text-white transition-colors duration-200" title="Upload"><FontAwesomeIcon icon={faUpload} /></button>
-            <button className="text-gray-400 text-xl hover:text-white transition-colors duration-200" title="Raise Hand"><FontAwesomeIcon icon={faHandPaper} /></button>
+            {/* Reaction Icon - Sends a reaction */}
+            <button 
+              onClick={() => sendReaction('👍')} 
+              className="text-gray-400 text-xl hover:text-white transition-colors duration-200" 
+              title="Send Reaction (👍)"
+            >
+              <FontAwesomeIcon icon={faSmileWink} />
+            </button>
+            
+            {/* Hand Raise Icon - Toggles hand raised state */}
+            <button 
+              onClick={toggleHandRaise} 
+              className={`text-xl transition-colors duration-200 ${isHandRaised ? 'text-yellow-400' : 'text-gray-400 hover:text-white'}`} 
+              title={isHandRaised ? "Lower Hand" : "Raise Hand"}
+            >
+              <FontAwesomeIcon icon={faHandPaper} />
+            </button>
+            
+            {/* Camera Toggle */}
             <button onClick={toggleCamera} className="text-gray-400 text-xl hover:text-white transition-colors duration-200" title="Toggle Camera"><FontAwesomeIcon icon={faVideo} /></button>
+            
+            {/* Mic Toggle */}
             <button onClick={toggleMic} className="text-gray-400 text-xl hover:text-white transition-colors duration-200" title="Toggle Microphone"><FontAwesomeIcon icon={faMicrophone} /></button>
+            
+            {/* Screen Share Toggle */}
             <button onClick={toggleScreenShare} className={`text-xl transition-colors duration-200 ${isScreenSharing ? 'text-white' : 'text-gray-400 hover:text-white'}`} title="Screen Share">
               <FontAwesomeIcon icon={faDesktop} />
             </button>
+            
+            {/* Chat Toggle */}
             <button onClick={toggleChat} className={`text-xl transition-colors duration-200 ${isChatOpen ? 'text-white' : 'text-gray-400 hover:text-white'}`} title="Chat">
               <FontAwesomeIcon icon={faCommentDots} />
             </button>
@@ -238,7 +283,7 @@ function Room() {
 
           <button onClick={() => { if(stream) stream.getTracks().forEach(t => t.stop()); navigate(`/prejoin/${roomId}`); }} className="w-full p-1 text-xs bg-red-600 text-white font-bold rounded-lg hover:bg-red-700">Leave</button>
 
-          {/* Bottom Icons */}
+          {/* Bottom Icons - Removed 'More Options' (faEllipsisV) */}
           <div className="flex flex-col items-center space-y-2 mb-2">
             <button onClick={toggleSettings} className="text-gray-400 text-xl hover:text-white transition-colors duration-200" title="Settings">
               <FontAwesomeIcon icon={faCog} />
@@ -246,11 +291,11 @@ function Room() {
             <button onClick={toggleParticipants} className="text-gray-400 text-xl hover:text-white transition-colors duration-200" title="Participants">
               <FontAwesomeIcon icon={faUserFriends} />
             </button>
-            <button className="text-gray-400 text-xl hover:text-white transition-colors duration-200" title="More Options"><FontAwesomeIcon icon={faEllipsisV} /></button>
+            {/* faEllipsisV (More Options) removed here */}
           </div>
         </div>
 
-        {/* Video Grid - Now using Dynamic CSS Grid for optimal tiling */}
+        {/* Video Grid (UNCHANGED) */}
         <div 
           className={`flex-1 transition-all duration-300 ${isChatOpen || isParticipantsOpen ? 'mr-80' : 'mr-0'} p-2 h-full w-full gap-2 ${containerClass}`}
         >
@@ -258,8 +303,6 @@ function Room() {
             <div 
               key={user.id} 
               className={itemClass}
-              // In the single participant case, the flex container (containerClass) and the tile (itemClass) handle the size.
-              // In the multi-participant case, the grid container handles the sizing, so no need for inline style.
             >
               {user.id === 'me' ? (
                 <video ref={userVideo} autoPlay muted playsInline className="w-full h-full object-cover" />
@@ -289,7 +332,7 @@ function Room() {
           </div>
         )}
 
-        {/* Settings Panel (adjusted left position) */}
+        {/* Settings Panel (unchanged) */}
         {isSettingsOpen && (
           <div className="absolute top-16 left-[50px] w-80 h-auto p-4 bg-[#2E4242] rounded-xl shadow-xl space-y-4 z-50 transition-transform duration-300">
             <label className="text-white font-medium">Microphone</label>
