@@ -1,70 +1,197 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
-export default function Schedule() {
-  const [meetings, setMeetings] = useState([
-    { id: 1, title: "Team Sync", date: "2025-10-02", time: "10:00 AM" },
-    { id: 2, title: "Project Review", date: "2025-10-03", time: "02:00 PM" },
-  ]);
+function Schedule() {
+  const navigate = useNavigate();
+  const [meetingDetails, setMeetingDetails] = useState({
+    title: "",
+    attendee: "",
+    startDate: "",
+    startTime: "",
+    endDate: "",
+    endTime: "",
+    whoCanEnter: "Anyone with the link", // Default value for dropdown
+    repeat: "Never", // Default value for dropdown
+  });
 
-  const [newMeeting, setNewMeeting] = useState({ title: "", date: "", time: "" });
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setMeetingDetails((prevDetails) => ({
+      ...prevDetails,
+      [name]: value,
+    }));
+  };
 
-  const handleAddMeeting = (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
-    if (!newMeeting.title || !newMeeting.date || !newMeeting.time) return;
-    setMeetings([...meetings, { ...newMeeting, id: Date.now() }]);
-    setNewMeeting({ title: "", date: "", time: "" });
+    // In a real application, you would send meetingDetails to a backend API here.
+    console.log("Scheduling Meeting:", meetingDetails);
+    alert("Meeting Scheduled! (Check console for details)");
+    // After scheduling, you might navigate the user to a confirmation page or back to the landing page.
+    navigate("/");
+  };
+
+  const inputStyle = {
+    padding: "0.75rem",
+    margin: "0.5rem 0",
+    borderRadius: "5px",
+    border: "1px solid #444",
+    backgroundColor: "#333",
+    color: "white",
+    width: "100%",
+    boxSizing: "border-box",
+  };
+
+  const buttonStyle = {
+    padding: "0.75rem 1.5rem",
+    margin: "1.5rem 0 0",
+    fontSize: "1rem",
+    borderRadius: "5px",
+    border: "none",
+    backgroundColor: "#6D8A78", // Matching the instant meeting button's color
+    color: "white",
+    cursor: "pointer",
+    width: "100%", // Full width for the "Done" button
+  };
+  
+  const dateTimeControlStyle = {
+    padding: "0.75rem",
+    margin: "0.5rem 0.5rem 0.5rem 0",
+    borderRadius: "5px",
+    border: "1px solid #444",
+    backgroundColor: "#333",
+    color: "white",
+    // Adjust width for two controls per line
+    width: "calc(50% - 0.5rem)", 
+    boxSizing: "border-box",
+  };
+  
+  const selectStyle = {
+    ...inputStyle,
+    appearance: "none", // Remove default dropdown arrow for better dark mode look
+    backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%23fff'%3e%3cpath fill-rule='evenodd' d='M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z' clip-rule='evenodd'/%3e%3c/svg%3e")`,
+    backgroundRepeat: "no-repeat",
+    backgroundPosition: "right 0.75rem center",
+    backgroundSize: "0.65rem",
+    paddingRight: "2.5rem", // Add space for the custom arrow
   };
 
   return (
-    <div className="p-6 bg-gray-100 min-h-screen">
-      <h2 className="text-2xl font-bold mb-6">Scheduled Meetings</h2>
+    <div
+      style={{
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        height: "100vh",
+        backgroundColor: "#1D2C2A", // Background color from LandingPage
+        fontFamily: "Arial, sans-serif",
+      }}
+    >
+      <div
+        style={{
+          backgroundColor: "#111", // Darker panel background
+          padding: "2rem",
+          borderRadius: "10px",
+          width: "400px",
+          boxShadow: "0 4px 8px rgba(0, 0, 0, 0.5)",
+          color: "white",
+        }}
+      >
+        <h2 style={{ textAlign: "center", marginBottom: "1.5rem", color: "#E8E7E5" }}>
+          Schedule A Meet
+        </h2>
+        <form onSubmit={handleSubmit}>
+          {/* Title */}
+          <label style={{ display: "block", color: "#bbb", marginBottom: "0.2rem" }}>Title:</label>
+          <input
+            type="text"
+            name="title"
+            value={meetingDetails.title}
+            onChange={handleChange}
+            style={inputStyle}
+          />
 
-      {/* Add Meeting Form */}
-      <form onSubmit={handleAddMeeting} className="mb-6 flex flex-col md:flex-row gap-3">
-        <input
-          type="text"
-          placeholder="Meeting Title"
-          value={newMeeting.title}
-          onChange={(e) => setNewMeeting({ ...newMeeting, title: e.target.value })}
-          className="border rounded px-3 py-2 flex-1 focus:outline-none"
-        />
-        <input
-          type="date"
-          value={newMeeting.date}
-          onChange={(e) => setNewMeeting({ ...newMeeting, date: e.target.value })}
-          className="border rounded px-3 py-2 focus:outline-none"
-        />
-        <input
-          type="time"
-          value={newMeeting.time}
-          onChange={(e) => setNewMeeting({ ...newMeeting, time: e.target.value })}
-          className="border rounded px-3 py-2 focus:outline-none"
-        />
-        <button
-          type="submit"
-          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition-colors"
-        >
-          Add
-        </button>
-      </form>
-
-      {/* Meeting List */}
-      <div className="grid gap-4">
-        {meetings.map((meeting) => (
-          <div
-            key={meeting.id}
-            className="bg-white p-4 rounded-lg shadow flex justify-between items-center"
-          >
-            <div>
-              <h3 className="font-bold text-lg">{meeting.title}</h3>
-              <p className="text-gray-500">{meeting.date} • {meeting.time}</p>
-            </div>
-            <button className="text-red-500 hover:text-red-700 font-semibold">
-              Delete
-            </button>
+          {/* Attendee/Email */}
+          <label style={{ display: "block", color: "#bbb", marginBottom: "0.2rem" }}>Enter Name or Email</label>
+          <input
+            type="text"
+            name="attendee"
+            value={meetingDetails.attendee}
+            onChange={handleChange}
+            style={inputStyle}
+          />
+          
+          {/* Start Date and Time */}
+          <div style={{ display: "flex", gap: "1rem" }}>
+             <input
+              type="date"
+              name="startDate"
+              value={meetingDetails.startDate}
+              onChange={handleChange}
+              style={{ ...dateTimeControlStyle, marginRight: "0" }} // Override margin for the date
+            />
+             <input
+              type="time"
+              name="startTime"
+              value={meetingDetails.startTime}
+              onChange={handleChange}
+              style={{ ...dateTimeControlStyle, marginLeft: "0" }} // Override margin for the time
+            />
           </div>
-        ))}
+          
+          {/* End Date and Time (Assuming the screenshot implies a date range) */}
+          <div style={{ display: "flex", gap: "1rem" }}>
+             <input
+              type="date"
+              name="endDate"
+              value={meetingDetails.endDate}
+              onChange={handleChange}
+              style={{ ...dateTimeControlStyle, marginRight: "0" }} 
+            />
+             <input
+              type="time"
+              name="endTime"
+              value={meetingDetails.endTime}
+              onChange={handleChange}
+              style={{ ...dateTimeControlStyle, marginLeft: "0" }} 
+            />
+          </div>
+
+          {/* Who can enter meet? */}
+          <label style={{ display: "block", color: "#bbb", marginTop: "1rem", marginBottom: "0.2rem" }}>Who can enter meet?</label>
+          <select
+            name="whoCanEnter"
+            value={meetingDetails.whoCanEnter}
+            onChange={handleChange}
+            style={selectStyle}
+          >
+            <option value="Anyone with the link">Anyone with the link</option>
+            <option value="Only invited users">Only invited users</option>
+            <option value="Only logged-in users">Only logged-in users</option>
+          </select>
+
+          {/* Repeat the Meet? */}
+          <label style={{ display: "block", color: "#bbb", marginTop: "1rem", marginBottom: "0.2rem" }}>Repeat the Meet ?</label>
+          <select
+            name="repeat"
+            value={meetingDetails.repeat}
+            onChange={handleChange}
+            style={selectStyle}
+          >
+            <option value="Never">Never</option>
+            <option value="Daily">Daily</option>
+            <option value="Weekly">Weekly</option>
+            <option value="Monthly">Monthly</option>
+          </select>
+
+          {/* Done Button */}
+          <button type="submit" style={buttonStyle}>
+            Done
+          </button>
+        </form>
       </div>
     </div>
   );
 }
+
+export default Schedule;

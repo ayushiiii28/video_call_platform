@@ -5,6 +5,7 @@ import PreJoin from "./components/PreJoin.jsx";
 import MeetingRoom from "./components/MeetingRoom.jsx";
 import Login from "./components/login.jsx";
 import Signup from "./components/signup.jsx";
+import Schedule from "./components/Schedule.jsx"; // 👈 Import the new component
 
 function App() {
   return (
@@ -13,6 +14,8 @@ function App() {
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
+        {/* 👇 New Route for the Scheduling Page */}
+        <Route path="/schedule" element={<Schedule />} /> 
         <Route path="/prejoin/:roomId" element={<PreJoin />} />
         <Route path="/room/:roomId" element={<MeetingRoom />} />
       </Routes>

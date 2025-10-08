@@ -22,6 +22,11 @@ function LandingPage() {
     navigate(`/prejoin/${newRoomId}`);
   };
 
+  // New handler for scheduling a meeting
+  const handleScheduleMeeting = () => {
+    navigate("/schedule");
+  };
+
   const handleSignUp = () => {
     navigate("/signup");
   };
@@ -140,21 +145,38 @@ function LandingPage() {
           {errorMessage && <p style={{ color: "#FF6347", marginTop: "0.5rem" }}>{errorMessage}</p>}
         </div>
 
-        <button
-          onClick={handleInstantMeeting}
-          style={{
-            marginTop: "2rem",
-            padding: "0.75rem 2.5rem",
-            fontSize: "1.2rem",
-            borderRadius: "5px",
-            border: "none",
-            backgroundColor: "#6D8A78",
-            color: "white",
-            cursor: "pointer",
-          }}
-        >
-          Start instant meeting
-        </button>
+        {/* Buttons for Instant and Schedule Meeting */}
+        <div style={{ display: "flex", gap: "1rem", marginTop: "2rem" }}>
+          <button
+            onClick={handleInstantMeeting}
+            style={{
+              padding: "0.75rem 2.5rem",
+              fontSize: "1.2rem",
+              borderRadius: "5px",
+              border: "none",
+              backgroundColor: "#6D8A78",
+              color: "white",
+              cursor: "pointer",
+            }}
+          >
+            Start instant meeting
+          </button>
+          {/* New Schedule Meet Button */}
+          <button
+            onClick={handleScheduleMeeting}
+            style={{
+              padding: "0.75rem 2.5rem",
+              fontSize: "1.2rem",
+              borderRadius: "5px",
+              border: "none",
+              backgroundColor: "#2E4242", // A complementary color
+              color: "white",
+              cursor: "pointer",
+            }}
+          >
+            Schedule Meet 🗓️
+          </button>
+        </div>
       </div>
 
       {/* Right section for the image */}
