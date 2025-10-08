@@ -6,8 +6,10 @@ import Recording from "./Recording";
 
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { 
-  faSmileWink, faHandPaper, faVideo, faMicrophone, 
-  faCommentDots, faDesktop, faUserFriends, faCog, faShareAlt, faTimes // Added faTimes for close button
+  faSmileWink, faHandPaper, 
+  faVideo, faVideoSlash, // NEW: Video Slash
+  faMicrophone, faMicrophoneSlash, // NEW: Mic Slash
+  faCommentDots, faDesktop, faUserFriends, faCog, faShareAlt, faTimes
 } from '@fortawesome/free-solid-svg-icons';
 
 function Room() {
@@ -26,7 +28,6 @@ function Room() {
   const [isParticipantsOpen, setIsParticipantsOpen] = useState(false);
   const [isHandRaised, setIsHandRaised] = useState(false); 
 
-  // NEW STATE for Emoji Picker and Notification
   const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
   const [reactionNotification, setReactionNotification] = useState(null);
   
@@ -112,7 +113,6 @@ function Room() {
     // Simulate multiple participants joining for testing the grid
     const joinRequestTimer = setTimeout(() => {
         setPendingParticipants(mockJoinRequests);
-        // Admit one more user to test a 3-person grid
         setParticipants(prev => [...prev, mockJoinRequests[0]]);
     }, 5000);
 
@@ -123,7 +123,7 @@ function Room() {
     };
   }, [name, camera, mic, selectedMic, localVolume, noiseSuppression, navigate, roomId]);
 
-  // Toggles (unchanged)
+  // Toggles 
   const toggleChat = () => setIsChatOpen(prev => !prev);
   const toggleScreenShare = () => setIsScreenSharing(prev => !prev);
   const toggleSettings = () => setIsSettingsOpen(prev => !prev);
@@ -131,13 +131,12 @@ function Room() {
   const toggleEmojiPicker = () => setIsEmojiPickerOpen(prev => !prev);
 
 
-  // NEW: Reaction & Hand Raise Functions
+  // Reaction & Hand Raise Functions
   const sendReaction = (reaction) => {
     console.log(`Sending reaction: ${reaction}`);
-    setIsEmojiPickerOpen(false); // Close the picker after selection
-    setReactionNotification(reaction); // Show notification
+    setIsEmojiPickerOpen(false); 
+    setReactionNotification(reaction); 
     
-    // Hide notification after 3 seconds
     setTimeout(() => {
         setReactionNotification(null);
     }, 3000);
@@ -199,22 +198,16 @@ function Room() {
   // Function to determine GRID CONTAINER classes based on participant count (UNCHANGED)
   const getGridContainerClass = (count) => {
     if (count === 1) {
-        // Single user: Use flexbox for full-screen centering
         return "flex items-center justify-center";
     } else if (count <= 2) {
-        // 2 users: 1 row, 2 columns
         return "grid grid-cols-2 grid-rows-1";
     } else if (count <= 4) {
-        // 3 or 4 users: 2 rows, 2 columns
         return "grid grid-cols-2 grid-rows-2";
     } else if (count <= 6) {
-        // 5 or 6 users: 2 rows, 3 columns
         return "grid grid-cols-3 grid-rows-2";
     } else if (count <= 9) {
-        // 7 to 9 users: 3 rows, 3 columns
         return "grid grid-cols-3 grid-rows-3";
     } else {
-        // More than 9: 4 rows, 4 columns
         return "grid grid-cols-4 grid-rows-4";
     }
   };
@@ -222,18 +215,16 @@ function Room() {
   // Function to determine GRID ITEM classes (UNCHANGED)
   const getGridItemClass = (count) => {
       const baseClasses = "relative bg-[#1E1F21] rounded-xl overflow-hidden shadow-2xl w-full h-full";
-      
       if (count === 1) {
           return `${baseClasses}`;
       } 
-      
       return `${baseClasses} aspect-video`; 
   };
 
   const containerClass = getGridContainerClass(participants.length);
   const itemClass = getGridItemClass(participants.length);
 
-  // Component for the Emoji Picker Overlay
+  // Component for the Emoji Picker Overlay (UNCHANGED)
   const EmojiPicker = () => (
     <div className="absolute left-[60px] top-4 z-50 p-3 bg-[#2E4242] rounded-xl shadow-2xl">
       <div className="flex justify-between items-center mb-2">
@@ -259,7 +250,8 @@ function Room() {
 
   return (
     <div className="flex flex-col h-screen w-screen bg-[#1D2C2A] text-[#E8E7E5] font-sans">
-      {/* Reaction Notification */}
+      
+      {/* Reaction Notification (UNCHANGED) */}
       {reactionNotification && (
           <div className="fixed top-4 right-4 z-50 bg-green-500 text-white p-3 rounded-lg shadow-xl animate-bounce">
               {reactionNotification} Reaction Sent!
@@ -278,11 +270,11 @@ function Room() {
 
       {/* Main Content */}
       <div className="flex flex-1 overflow-hidden">
-        {/* Left Sidebar */}
+        {/* Left Sidebar - UPDATED CAMERA AND MIC ICONS */}
         <div className="flex flex-col w-[50px] p-1 bg-[#1E1F21] items-center justify-between flex-shrink-0 h-full">
           {/* Top Icons */}
           <div className="flex flex-col items-center space-y-2 mt-2">
-            {/* Reaction Icon - Toggles the picker */}
+            {/* Reaction Icon */}
             <button 
               onClick={toggleEmojiPicker} 
               className={`text-xl transition-colors duration-200 ${isEmojiPickerOpen ? 'text-white' : 'text-gray-400 hover:text-white'}`} 
@@ -291,7 +283,7 @@ function Room() {
               <FontAwesomeIcon icon={faSmileWink} />
             </button>
             
-            {/* Hand Raise Icon - Toggles hand raised state */}
+            {/* Hand Raise Icon */}
             <button 
               onClick={toggleHandRaise} 
               className={`text-xl transition-colors duration-200 ${isHandRaised ? 'text-yellow-400' : 'text-gray-400 hover:text-white'}`} 
@@ -300,11 +292,23 @@ function Room() {
               <FontAwesomeIcon icon={faHandPaper} />
             </button>
             
-            {/* Camera Toggle */}
-            <button onClick={toggleCamera} className="text-gray-400 text-xl hover:text-white transition-colors duration-200" title="Toggle Camera"><FontAwesomeIcon icon={faVideo} /></button>
+            {/* Camera Toggle - CONDITIONAL ICON */}
+            <button 
+              onClick={toggleCamera} 
+              className={`text-xl transition-colors duration-200 ${camera ? 'text-white' : 'text-red-500'} hover:text-white`} 
+              title={camera ? "Turn Camera Off" : "Turn Camera On"}
+            >
+              <FontAwesomeIcon icon={camera ? faVideo : faVideoSlash} />
+            </button>
             
-            {/* Mic Toggle */}
-            <button onClick={toggleMic} className="text-gray-400 text-xl hover:text-white transition-colors duration-200" title="Toggle Microphone"><FontAwesomeIcon icon={faMicrophone} /></button>
+            {/* Mic Toggle - CONDITIONAL ICON */}
+            <button 
+              onClick={toggleMic} 
+              className={`text-xl transition-colors duration-200 ${mic ? 'text-white' : 'text-red-500'} hover:text-white`} 
+              title={mic ? "Turn Mic Off" : "Turn Mic On"}
+            >
+              <FontAwesomeIcon icon={mic ? faMicrophone : faMicrophoneSlash} />
+            </button>
             
             {/* Screen Share Toggle */}
             <button onClick={toggleScreenShare} className={`text-xl transition-colors duration-200 ${isScreenSharing ? 'text-white' : 'text-gray-400 hover:text-white'}`} title="Screen Share">
@@ -320,7 +324,7 @@ function Room() {
 
           <button onClick={() => { if(stream) stream.getTracks().forEach(t => t.stop()); navigate(`/prejoin/${roomId}`); }} className="w-full p-1 text-xs bg-red-600 text-white font-bold rounded-lg hover:bg-red-700">Leave</button>
 
-          {/* Bottom Icons */}
+          {/* Bottom Icons (unchanged) */}
           <div className="flex flex-col items-center space-y-2 mb-2">
             <button onClick={toggleSettings} className="text-gray-400 text-xl hover:text-white transition-colors duration-200" title="Settings">
               <FontAwesomeIcon icon={faCog} />
@@ -334,7 +338,7 @@ function Room() {
         {/* EMOJI PICKER RENDERING */}
         {isEmojiPickerOpen && <EmojiPicker />}
 
-        {/* Video Grid (UNCHANGED) */}
+        {/* Video Grid (unchanged) */}
         <div 
           className={`flex-1 transition-all duration-300 ${isChatOpen || isParticipantsOpen ? 'mr-80' : 'mr-0'} p-2 h-full w-full gap-2 ${containerClass}`}
         >
