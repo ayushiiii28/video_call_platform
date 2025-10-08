@@ -9,7 +9,8 @@ import {
   faSmileWink, faHandPaper, 
   faVideo, faVideoSlash, 
   faMicrophone, faMicrophoneSlash, 
-  faCommentDots, faDesktop, faUserFriends, faCog, faShareAlt, faTimes
+  faCommentDots, faDesktop, faUserFriends, faCog, faShareAlt, faTimes,
+  faSignOutAlt // NEW: Using a standard sign-out icon for 'Leave'
 } from '@fortawesome/free-solid-svg-icons';
 
 function Room() {
@@ -50,7 +51,7 @@ function Room() {
     { id: 103, name: "Charlie", videoUrl: "https://placehold.co/600x400/FFD700/000000?text=Charlie" },
   ];
 
-  // Get user media and devices (unchanged from last correct functional version)
+  // Get user media and devices 
   useEffect(() => {
     if (!name) {
       navigate(`/prejoin/${roomId}`);
@@ -275,12 +276,13 @@ function Room() {
 
       {/* Main Content */}
       <div className="flex flex-1 overflow-hidden">
-        {/* Left Sidebar (unchanged) */}
+        {/* Left Sidebar - UPDATED LAYOUT */}
         <div className="flex flex-col w-[50px] p-1 bg-[#1E1F21] items-center justify-between flex-shrink-0 h-full">
-          {/* Top Icons */}
-          <div className="flex flex-col items-center space-y-4 mt-2">
+          
+          {/* Group 1: 4 icons (Reaction, Hand, Camera, Mic) */}
+          <div className="flex flex-col items-center space-y-4 pt-4">
             
-            {/* Reaction Icon */}
+            {/* 1. Reaction Icon */}
             <button 
               onClick={toggleEmojiPicker} 
               className={`text-2xl transition-colors duration-200 ${isEmojiPickerOpen ? 'text-white' : 'text-gray-400 hover:text-white'}`} 
@@ -289,7 +291,7 @@ function Room() {
               <FontAwesomeIcon icon={faSmileWink} />
             </button>
             
-            {/* Hand Raise Icon */}
+            {/* 2. Hand Raise Icon */}
             <button 
               onClick={toggleHandRaise} 
               className={`text-2xl transition-colors duration-200 ${isHandRaised ? 'text-yellow-400' : 'text-gray-400 hover:text-white'}`} 
@@ -298,7 +300,7 @@ function Room() {
               <FontAwesomeIcon icon={faHandPaper} />
             </button>
             
-            {/* Camera Toggle */}
+            {/* 3. Camera Toggle */}
             <button 
               onClick={toggleCamera} 
               className={`text-2xl transition-colors duration-200 ${camera ? 'text-white' : 'text-red-500'} hover:text-white`} 
@@ -307,7 +309,7 @@ function Room() {
               <FontAwesomeIcon icon={camera ? faVideo : faVideoSlash} />
             </button>
             
-            {/* Mic Toggle */}
+            {/* 4. Mic Toggle */}
             <button 
               onClick={toggleMic} 
               className={`text-2xl transition-colors duration-200 ${mic ? 'text-white' : 'text-red-500'} hover:text-white`} 
@@ -315,36 +317,54 @@ function Room() {
             >
               <FontAwesomeIcon icon={mic ? faMicrophone : faMicrophoneSlash} />
             </button>
-            
-            {/* Screen Share Toggle */}
+          </div>
+
+          {/* Middle: Leave Button */}
+          <button 
+            onClick={() => { if(stream) stream.getTracks().forEach(t => t.stop()); navigate(`/prejoin/${roomId}`); }} 
+            // Increased size (text-xl) and added padding (p-3) for emphasis
+            className="w-10 h-10 p-3 flex items-center justify-center bg-red-600 text-white font-bold rounded-lg hover:bg-red-700 transition-colors duration-200"
+            title="Leave Meeting"
+          >
+            {/* Increased icon size to text-xl */}
+            <FontAwesomeIcon icon={faSignOutAlt} className="text-xl"/>
+          </button>
+
+
+          {/* Group 2: 4 icons (Screen Share, Chat, Recording, Participants/Cog) */}
+          <div className="flex flex-col items-center space-y-4">
+
+            {/* 5. Screen Share Toggle */}
             <button onClick={toggleScreenShare} className={`text-2xl transition-colors duration-200 ${isScreenSharing ? 'text-white' : 'text-gray-400 hover:text-white'}`} title="Screen Share">
               <FontAwesomeIcon icon={faDesktop} />
             </button>
             
-            {/* Chat Toggle */}
+            {/* 6. Chat Toggle */}
             <button onClick={toggleChat} className={`text-2xl transition-colors duration-200 ${isChatOpen ? 'text-white' : 'text-gray-400 hover:text-white'}`} title="Chat">
               <FontAwesomeIcon icon={faCommentDots} />
             </button>
-            <Recording stream={stream} />
-          </div>
+            
+            {/* 7. Recording Icon (assuming Recording is just a button/status) */}
+            <Recording stream={stream} /> 
 
-          <button onClick={() => { if(stream) stream.getTracks().forEach(t => t.stop()); navigate(`/prejoin/${roomId}`); }} className="w-full p-1 text-xs bg-red-600 text-white font-bold rounded-lg hover:bg-red-700">Leave</button>
-
-          {/* Bottom Icons */}
-          <div className="flex flex-col items-center space-y-4 mb-2">
-            <button onClick={toggleSettings} className="text-2xl text-gray-400 hover:text-white transition-colors duration-200" title="Settings">
-              <FontAwesomeIcon icon={faCog} />
-            </button>
+             {/* 8. Participants */}
             <button onClick={toggleParticipants} className="text-2xl text-gray-400 hover:text-white transition-colors duration-200" title="Participants">
               <FontAwesomeIcon icon={faUserFriends} />
             </button>
           </div>
+
+          {/* Bottom: Settings Icon */}
+          <div className="flex flex-col items-center mb-2">
+            <button onClick={toggleSettings} className="text-2xl text-gray-400 hover:text-white transition-colors duration-200" title="Settings">
+              <FontAwesomeIcon icon={faCog} />
+            </button>
+          </div>
         </div>
 
-        {/* EMOJI PICKER RENDERING */}
+        {/* EMOJI PICKER RENDERING (unchanged) */}
         {isEmojiPickerOpen && <EmojiPicker />}
 
-        {/* Video Grid */}
+        {/* Video Grid (unchanged) */}
         <div 
           className={`flex-1 transition-all duration-300 ${isChatOpen || isParticipantsOpen ? 'mr-80' : 'mr-0'} p-2 h-full w-full gap-2 ${containerClass}`}
         >
@@ -354,13 +374,13 @@ function Room() {
               className={itemClass}
             >
               {user.id === 'me' ? (
-                // FIX 1: Reverting to object-cover to ensure full coverage (no black bars).
+                // Video element with object-cover
                 <video ref={userVideo} autoPlay muted playsInline className="w-full h-full object-cover" />
               ) : (
                 <img src={user.videoUrl} alt={user.name} className="w-full h-full object-cover" />
               )}
 
-              {/* FIX 2: Overlay for "Camera Off" status to prevent a confusing black tile */}
+              {/* Overlay for "Camera Off" status */}
               {user.id === 'me' && !camera && (
                 <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-70">
                     <span className="text-white text-lg font-semibold">Camera Off</span>
