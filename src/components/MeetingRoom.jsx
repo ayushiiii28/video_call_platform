@@ -43,7 +43,7 @@ function Room() {
     { id: 102, name: "Michael", videoUrl: "https://placehold.co/600x400/81B4AE/ffffff?text=Michael" },
   ];
 
-  // Get user media and devices
+  // Get user media and devices (unchanged logic)
   useEffect(() => {
     if (!name) {
       navigate(`/prejoin/${roomId}`);
@@ -112,7 +112,7 @@ function Room() {
     };
   }, [name, camera, mic, selectedMic, localVolume, noiseSuppression, navigate, roomId]);
 
-  // Toggles
+  // Toggles (unchanged)
   const toggleChat = () => setIsChatOpen(prev => !prev);
   const toggleScreenShare = () => setIsScreenSharing(prev => !prev);
   const toggleSettings = () => setIsSettingsOpen(prev => !prev);
@@ -165,6 +165,45 @@ function Room() {
   };
   const handleDeny = (userToDeny) => setPendingParticipants(prev => prev.filter(u => u.id !== userToDeny.id));
 
+  // Function to determine GRID CONTAINER classes based on participant count
+  const getGridContainerClass = (count) => {
+    if (count === 1) {
+        // Single user: Use flexbox for full-screen centering
+        return "flex items-center justify-center";
+    } else if (count <= 2) {
+        // 2 users: 1 row, 2 columns
+        return "grid grid-cols-2 grid-rows-1";
+    } else if (count <= 4) {
+        // 3 or 4 users: 2 rows, 2 columns
+        return "grid grid-cols-2 grid-rows-2";
+    } else if (count <= 6) {
+        // 5 or 6 users: 2 rows, 3 columns
+        return "grid grid-cols-3 grid-rows-2";
+    } else if (count <= 9) {
+        // 7 to 9 users: 3 rows, 3 columns
+        return "grid grid-cols-3 grid-rows-3";
+    } else {
+        // More than 9: 4 rows, 4 columns
+        return "grid grid-cols-4 grid-rows-4";
+    }
+  };
+
+  // Function to determine GRID ITEM classes
+  const getGridItemClass = (count) => {
+      const baseClasses = "relative bg-[#1E1F21] rounded-xl overflow-hidden shadow-2xl w-full h-full";
+      
+      if (count === 1) {
+          // Single user: Full size within the flex container
+          return `${baseClasses}`;
+      } 
+      
+      // All grid items need no explicit size, they rely on the parent grid
+      return `${baseClasses} aspect-video`; 
+  };
+
+  const containerClass = getGridContainerClass(participants.length);
+  const itemClass = getGridItemClass(participants.length);
+
   return (
     <div className="flex flex-col h-screen w-screen bg-[#1D2C2A] text-[#E8E7E5] font-sans">
       {/* Top Bar (unchanged) */}
@@ -179,9 +218,9 @@ function Room() {
 
       {/* Main Content */}
       <div className="flex flex-1 overflow-hidden">
-        {/* Left Sidebar - Reduced width */}
+        {/* Left Sidebar - Minimized (unchanged) */}
         <div className="flex flex-col w-[50px] p-1 bg-[#1E1F21] items-center justify-between flex-shrink-0 h-full">
-          {/* Top Icons - Reduced size and spacing */}
+          {/* Top Icons */}
           <div className="flex flex-col items-center space-y-2 mt-2">
             <button className="text-gray-400 text-xl hover:text-white transition-colors duration-200" title="Reactions"><FontAwesomeIcon icon={faSmileWink} /></button>
             <button className="text-gray-400 text-xl hover:text-white transition-colors duration-200" title="Upload"><FontAwesomeIcon icon={faUpload} /></button>
@@ -199,7 +238,7 @@ function Room() {
 
           <button onClick={() => { if(stream) stream.getTracks().forEach(t => t.stop()); navigate(`/prejoin/${roomId}`); }} className="w-full p-1 text-xs bg-red-600 text-white font-bold rounded-lg hover:bg-red-700">Leave</button>
 
-          {/* Bottom Icons - Reduced size and spacing */}
+          {/* Bottom Icons */}
           <div className="flex flex-col items-center space-y-2 mb-2">
             <button onClick={toggleSettings} className="text-gray-400 text-xl hover:text-white transition-colors duration-200" title="Settings">
               <FontAwesomeIcon icon={faCog} />
@@ -211,10 +250,17 @@ function Room() {
           </div>
         </div>
 
-        {/* Video Grid - Reduced padding and increased video card width */}
-        <div className={`flex-1 transition-all duration-300 ${isChatOpen || isParticipantsOpen ? 'mr-80' : 'mr-0'} p-2 flex flex-wrap justify-center gap-2`}>
+        {/* Video Grid - Now using Dynamic CSS Grid for optimal tiling */}
+        <div 
+          className={`flex-1 transition-all duration-300 ${isChatOpen || isParticipantsOpen ? 'mr-80' : 'mr-0'} p-2 h-full w-full gap-2 ${containerClass}`}
+        >
           {participants.map(user => (
-            <div key={user.id} className="relative w-full md:w-96 h-60 rounded-xl overflow-hidden shadow-2xl bg-[#1E1F21]">
+            <div 
+              key={user.id} 
+              className={itemClass}
+              // In the single participant case, the flex container (containerClass) and the tile (itemClass) handle the size.
+              // In the multi-participant case, the grid container handles the sizing, so no need for inline style.
+            >
               {user.id === 'me' ? (
                 <video ref={userVideo} autoPlay muted playsInline className="w-full h-full object-cover" />
               ) : (
@@ -243,7 +289,7 @@ function Room() {
           </div>
         )}
 
-        {/* Settings Panel (adjusting left position based on new sidebar width) */}
+        {/* Settings Panel (adjusted left position) */}
         {isSettingsOpen && (
           <div className="absolute top-16 left-[50px] w-80 h-auto p-4 bg-[#2E4242] rounded-xl shadow-xl space-y-4 z-50 transition-transform duration-300">
             <label className="text-white font-medium">Microphone</label>
