@@ -48,10 +48,10 @@ function Schedule() {
     fontSize: "1rem",
     borderRadius: "5px",
     border: "none",
-    backgroundColor: "#6D8A78", // Matching the instant meeting button's color
+    backgroundColor: "#6D8A78", 
     color: "white",
     cursor: "pointer",
-    width: "100%", // Full width for the "Done" button
+    width: "100%", 
   };
   
   const dateTimeControlStyle = {
@@ -61,19 +61,18 @@ function Schedule() {
     border: "1px solid #444",
     backgroundColor: "#333",
     color: "white",
-    // Adjust width for two controls per line
     width: "calc(50% - 0.5rem)", 
     boxSizing: "border-box",
   };
   
   const selectStyle = {
     ...inputStyle,
-    appearance: "none", // Remove default dropdown arrow for better dark mode look
+    appearance: "none", 
     backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%23fff'%3e%3cpath fill-rule='evenodd' d='M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z' clip-rule='evenodd'/%3e%3c/svg%3e")`,
     backgroundRepeat: "no-repeat",
     backgroundPosition: "right 0.75rem center",
     backgroundSize: "0.65rem",
-    paddingRight: "2.5rem", // Add space for the custom arrow
+    paddingRight: "2.5rem", 
   };
 
   return (
@@ -83,16 +82,18 @@ function Schedule() {
         justifyContent: "center",
         alignItems: "center",
         height: "100vh",
-        backgroundColor: "#1D2C2A", // Background color from LandingPage
+        backgroundColor: "#1D2C2A", 
         fontFamily: "Arial, sans-serif",
       }}
     >
       <div
         style={{
-          backgroundColor: "#111", // Darker panel background
-          padding: "2rem",
+          backgroundColor: "#111", 
+          // 👇 MODIFIED: Reduced padding for shorter height
+          padding: "1.5rem", 
           borderRadius: "10px",
-          width: "400px",
+          // 👇 MODIFIED: Increased width 
+          width: "500px", 
           boxShadow: "0 4px 8px rgba(0, 0, 0, 0.5)",
           color: "white",
         }}
@@ -128,24 +129,26 @@ function Schedule() {
               name="startDate"
               value={meetingDetails.startDate}
               onChange={handleChange}
-              style={{ ...dateTimeControlStyle, marginRight: "0" }} // Override margin for the date
+              placeholder="dd-mm-yyyy" 
+              style={{ ...dateTimeControlStyle, marginRight: "0" }}
             />
              <input
               type="time"
               name="startTime"
               value={meetingDetails.startTime}
               onChange={handleChange}
-              style={{ ...dateTimeControlStyle, marginLeft: "0" }} // Override margin for the time
+              style={{ ...dateTimeControlStyle, marginLeft: "0" }} 
             />
           </div>
           
-          {/* End Date and Time (Assuming the screenshot implies a date range) */}
+          {/* End Date and Time */}
           <div style={{ display: "flex", gap: "1rem" }}>
              <input
               type="date"
               name="endDate"
               value={meetingDetails.endDate}
               onChange={handleChange}
+              placeholder="dd-mm-yyyy" 
               style={{ ...dateTimeControlStyle, marginRight: "0" }} 
             />
              <input
