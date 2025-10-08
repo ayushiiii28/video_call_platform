@@ -167,7 +167,7 @@ function Room() {
 
   return (
     <div className="flex flex-col h-screen w-screen bg-[#1D2C2A] text-[#E8E7E5] font-sans">
-      {/* Top Bar */}
+      {/* Top Bar (unchanged) */}
       <div className="flex justify-between items-center p-4 bg-[#1E1F21] flex-shrink-0">
         <div className="flex items-center space-x-2 p-2 bg-[#1E1F21] text-white font-bold">
           <span>Meeting Code: {roomId}</span>
@@ -179,40 +179,42 @@ function Room() {
 
       {/* Main Content */}
       <div className="flex flex-1 overflow-hidden">
-        {/* Left Sidebar */}
-        <div className="flex flex-col w-[60px] p-2 bg-[#1E1F21] items-center justify-between flex-shrink-0 h-full">
-          <div className="flex flex-col items-center space-y-4 mt-4">
-            <button className="text-gray-400 text-2xl hover:text-white transition-colors duration-200"><FontAwesomeIcon icon={faSmileWink} /></button>
-            <button className="text-gray-400 text-2xl hover:text-white transition-colors duration-200"><FontAwesomeIcon icon={faUpload} /></button>
-            <button className="text-gray-400 text-2xl hover:text-white transition-colors duration-200"><FontAwesomeIcon icon={faHandPaper} /></button>
-            <button className="text-gray-400 text-2xl hover:text-white transition-colors duration-200"><FontAwesomeIcon icon={faVideo} /></button>
-            <button className="text-gray-400 text-2xl hover:text-white transition-colors duration-200"><FontAwesomeIcon icon={faMicrophone} /></button>
-            <button onClick={toggleScreenShare} className={`text-2xl transition-colors duration-200 ${isScreenSharing ? 'text-white' : 'text-gray-400 hover:text-white'}`} title="Screen Share">
+        {/* Left Sidebar - Reduced width */}
+        <div className="flex flex-col w-[50px] p-1 bg-[#1E1F21] items-center justify-between flex-shrink-0 h-full">
+          {/* Top Icons - Reduced size and spacing */}
+          <div className="flex flex-col items-center space-y-2 mt-2">
+            <button className="text-gray-400 text-xl hover:text-white transition-colors duration-200" title="Reactions"><FontAwesomeIcon icon={faSmileWink} /></button>
+            <button className="text-gray-400 text-xl hover:text-white transition-colors duration-200" title="Upload"><FontAwesomeIcon icon={faUpload} /></button>
+            <button className="text-gray-400 text-xl hover:text-white transition-colors duration-200" title="Raise Hand"><FontAwesomeIcon icon={faHandPaper} /></button>
+            <button onClick={toggleCamera} className="text-gray-400 text-xl hover:text-white transition-colors duration-200" title="Toggle Camera"><FontAwesomeIcon icon={faVideo} /></button>
+            <button onClick={toggleMic} className="text-gray-400 text-xl hover:text-white transition-colors duration-200" title="Toggle Microphone"><FontAwesomeIcon icon={faMicrophone} /></button>
+            <button onClick={toggleScreenShare} className={`text-xl transition-colors duration-200 ${isScreenSharing ? 'text-white' : 'text-gray-400 hover:text-white'}`} title="Screen Share">
               <FontAwesomeIcon icon={faDesktop} />
             </button>
-            <button onClick={toggleChat} className={`text-2xl transition-colors duration-200 ${isChatOpen ? 'text-white' : 'text-gray-400 hover:text-white'}`} title="Chat">
+            <button onClick={toggleChat} className={`text-xl transition-colors duration-200 ${isChatOpen ? 'text-white' : 'text-gray-400 hover:text-white'}`} title="Chat">
               <FontAwesomeIcon icon={faCommentDots} />
             </button>
             <Recording stream={stream} />
           </div>
 
-          <button onClick={() => { if(stream) stream.getTracks().forEach(t => t.stop()); navigate(`/prejoin/${roomId}`); }} className="w-full p-2 bg-red-600 text-white font-bold rounded-lg hover:bg-red-700">Leave</button>
+          <button onClick={() => { if(stream) stream.getTracks().forEach(t => t.stop()); navigate(`/prejoin/${roomId}`); }} className="w-full p-1 text-xs bg-red-600 text-white font-bold rounded-lg hover:bg-red-700">Leave</button>
 
-          <div className="flex flex-col items-center space-y-4 mb-4">
-            <button onClick={toggleSettings} className="text-gray-400 text-2xl hover:text-white transition-colors duration-200">
+          {/* Bottom Icons - Reduced size and spacing */}
+          <div className="flex flex-col items-center space-y-2 mb-2">
+            <button onClick={toggleSettings} className="text-gray-400 text-xl hover:text-white transition-colors duration-200" title="Settings">
               <FontAwesomeIcon icon={faCog} />
             </button>
-            <button onClick={toggleParticipants} className="text-gray-400 text-2xl hover:text-white transition-colors duration-200">
+            <button onClick={toggleParticipants} className="text-gray-400 text-xl hover:text-white transition-colors duration-200" title="Participants">
               <FontAwesomeIcon icon={faUserFriends} />
             </button>
-            <button className="text-gray-400 text-2xl hover:text-white transition-colors duration-200"><FontAwesomeIcon icon={faEllipsisV} /></button>
+            <button className="text-gray-400 text-xl hover:text-white transition-colors duration-200" title="More Options"><FontAwesomeIcon icon={faEllipsisV} /></button>
           </div>
         </div>
 
-        {/* Video Grid */}
-        <div className={`flex-1 transition-all duration-300 ${isChatOpen || isParticipantsOpen ? 'mr-80' : 'mr-0'} p-4 flex flex-wrap justify-center gap-4`}>
+        {/* Video Grid - Reduced padding and increased video card width */}
+        <div className={`flex-1 transition-all duration-300 ${isChatOpen || isParticipantsOpen ? 'mr-80' : 'mr-0'} p-2 flex flex-wrap justify-center gap-2`}>
           {participants.map(user => (
-            <div key={user.id} className="relative w-full md:w-80 h-60 rounded-xl overflow-hidden shadow-2xl bg-[#1E1F21]">
+            <div key={user.id} className="relative w-full md:w-96 h-60 rounded-xl overflow-hidden shadow-2xl bg-[#1E1F21]">
               {user.id === 'me' ? (
                 <video ref={userVideo} autoPlay muted playsInline className="w-full h-full object-cover" />
               ) : (
@@ -223,10 +225,10 @@ function Room() {
           ))}
         </div>
 
-        {/* Chat Sidebar */}
+        {/* Chat Sidebar (unchanged) */}
         {isChatOpen && <div className="absolute top-0 right-0 h-full w-80 z-40 transition-transform duration-300"><ChatBox /></div>}
 
-        {/* Participants Panel */}
+        {/* Participants Panel (unchanged) */}
         {isParticipantsOpen && (
           <div className="absolute top-0 right-0 h-full w-80 z-50 bg-[#1E1F21] p-4 overflow-y-auto shadow-xl transition-transform duration-300">
             <h2 className="text-white font-bold mb-4">Participants</h2>
@@ -241,9 +243,9 @@ function Room() {
           </div>
         )}
 
-        {/* Settings Panel */}
+        {/* Settings Panel (adjusting left position based on new sidebar width) */}
         {isSettingsOpen && (
-          <div className="absolute top-16 left-[60px] w-80 h-auto p-4 bg-[#2E4242] rounded-xl shadow-xl space-y-4 z-50 transition-transform duration-300">
+          <div className="absolute top-16 left-[50px] w-80 h-auto p-4 bg-[#2E4242] rounded-xl shadow-xl space-y-4 z-50 transition-transform duration-300">
             <label className="text-white font-medium">Microphone</label>
             <select value={selectedMic} onChange={handleAudioInputChange} className="w-full p-2 rounded-lg bg-[#1E1F21] text-white">
               {audioInputs.map(d => <option key={d.deviceId} value={d.deviceId}>{d.label}</option>)}
@@ -267,10 +269,10 @@ function Room() {
 
       </div>
 
-      {/* ScreenShare Overlay */}
+      {/* ScreenShare Overlay (unchanged) */}
       {isScreenSharing && <ScreenShare stream={stream} />}
 
-      {/* Admission Dialog */}
+      {/* Admission Dialog (unchanged) */}
       {pendingParticipants.length > 0 && (
         <div className="fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center z-50">
           <div className="bg-[#2E4242] p-8 rounded-xl shadow-2xl text-white max-w-md w-full">
