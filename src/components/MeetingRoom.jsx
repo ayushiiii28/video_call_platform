@@ -7,8 +7,8 @@ import Recording from "./Recording";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { 
   faSmileWink, faHandPaper, faVideo, faMicrophone, 
-  faCommentDots, faDesktop, faUserFriends, faCog, faShareAlt 
-} from '@fortawesome/free-solid-svg-icons'; // Note: faUpload and faEllipsisV are removed
+  faCommentDots, faDesktop, faUserFriends, faCog, faShareAlt, faTimes // Added faTimes for close button
+} from '@fortawesome/free-solid-svg-icons';
 
 function Room() {
   const { roomId } = useParams();
@@ -24,10 +24,12 @@ function Room() {
   const [isScreenSharing, setIsScreenSharing] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isParticipantsOpen, setIsParticipantsOpen] = useState(false);
-  
-  // NEW STATE for Hand Raise feature
   const [isHandRaised, setIsHandRaised] = useState(false); 
 
+  // NEW STATE for Emoji Picker and Notification
+  const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
+  const [reactionNotification, setReactionNotification] = useState(null);
+  
   const [camera, setCamera] = useState(cameraOn ?? true);
   const [mic, setMic] = useState(micOn ?? true);
   const [audioInputs, setAudioInputs] = useState([]);
@@ -126,19 +128,24 @@ function Room() {
   const toggleScreenShare = () => setIsScreenSharing(prev => !prev);
   const toggleSettings = () => setIsSettingsOpen(prev => !prev);
   const toggleParticipants = () => setIsParticipantsOpen(prev => !prev);
+  const toggleEmojiPicker = () => setIsEmojiPickerOpen(prev => !prev);
+
 
   // NEW: Reaction & Hand Raise Functions
   const sendReaction = (reaction) => {
     console.log(`Sending reaction: ${reaction}`);
-    // In a real application, this would send a message to the signaling server
-    // which would trigger an animation/overlay on all participants' screens.
-    alert(`You sent a ${reaction}! (Placeholder action)`);
+    setIsEmojiPickerOpen(false); // Close the picker after selection
+    setReactionNotification(reaction); // Show notification
+    
+    // Hide notification after 3 seconds
+    setTimeout(() => {
+        setReactionNotification(null);
+    }, 3000);
   };
 
   const toggleHandRaise = () => {
     setIsHandRaised(prev => !prev);
     console.log(`Hand is now ${!isHandRaised ? 'raised' : 'lowered'}`);
-    // In a real application, this would update the participant's status on the server
   };
 
   const toggleCamera = () => {
@@ -160,7 +167,8 @@ function Room() {
       }
     }
   };
-
+  
+  // Audio handlers (unchanged)
   const handleAudioInputChange = (e) => {
     setSelectedMic(e.target.value);
     if (stream) stream.getTracks().forEach(track => track.stop());
@@ -216,19 +224,48 @@ function Room() {
       const baseClasses = "relative bg-[#1E1F21] rounded-xl overflow-hidden shadow-2xl w-full h-full";
       
       if (count === 1) {
-          // Single user: Full size within the flex container
           return `${baseClasses}`;
       } 
       
-      // All grid items need no explicit size, they rely on the parent grid
       return `${baseClasses} aspect-video`; 
   };
 
   const containerClass = getGridContainerClass(participants.length);
   const itemClass = getGridItemClass(participants.length);
 
+  // Component for the Emoji Picker Overlay
+  const EmojiPicker = () => (
+    <div className="absolute left-[60px] top-4 z-50 p-3 bg-[#2E4242] rounded-xl shadow-2xl">
+      <div className="flex justify-between items-center mb-2">
+        <h3 className="text-white text-sm font-semibold">Reactions</h3>
+        <button onClick={toggleEmojiPicker} className="text-gray-400 hover:text-white">
+          <FontAwesomeIcon icon={faTimes} />
+        </button>
+      </div>
+      <div className="flex space-x-2">
+        {['👍', '❤️', '😂', '👏'].map(emoji => (
+          <button 
+            key={emoji}
+            onClick={() => sendReaction(emoji)} 
+            className="text-3xl p-1 hover:bg-gray-700 rounded-lg transition-colors"
+            title={`Send ${emoji}`}
+          >
+            {emoji}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+
   return (
     <div className="flex flex-col h-screen w-screen bg-[#1D2C2A] text-[#E8E7E5] font-sans">
+      {/* Reaction Notification */}
+      {reactionNotification && (
+          <div className="fixed top-4 right-4 z-50 bg-green-500 text-white p-3 rounded-lg shadow-xl animate-bounce">
+              {reactionNotification} Reaction Sent!
+          </div>
+      )}
+      
       {/* Top Bar (unchanged) */}
       <div className="flex justify-between items-center p-4 bg-[#1E1F21] flex-shrink-0">
         <div className="flex items-center space-x-2 p-2 bg-[#1E1F21] text-white font-bold">
@@ -241,15 +278,15 @@ function Room() {
 
       {/* Main Content */}
       <div className="flex flex-1 overflow-hidden">
-        {/* Left Sidebar - UPDATED ICONS */}
+        {/* Left Sidebar */}
         <div className="flex flex-col w-[50px] p-1 bg-[#1E1F21] items-center justify-between flex-shrink-0 h-full">
           {/* Top Icons */}
           <div className="flex flex-col items-center space-y-2 mt-2">
-            {/* Reaction Icon - Sends a reaction */}
+            {/* Reaction Icon - Toggles the picker */}
             <button 
-              onClick={() => sendReaction('👍')} 
-              className="text-gray-400 text-xl hover:text-white transition-colors duration-200" 
-              title="Send Reaction (👍)"
+              onClick={toggleEmojiPicker} 
+              className={`text-xl transition-colors duration-200 ${isEmojiPickerOpen ? 'text-white' : 'text-gray-400 hover:text-white'}`} 
+              title="Send Reaction"
             >
               <FontAwesomeIcon icon={faSmileWink} />
             </button>
@@ -283,7 +320,7 @@ function Room() {
 
           <button onClick={() => { if(stream) stream.getTracks().forEach(t => t.stop()); navigate(`/prejoin/${roomId}`); }} className="w-full p-1 text-xs bg-red-600 text-white font-bold rounded-lg hover:bg-red-700">Leave</button>
 
-          {/* Bottom Icons - Removed 'More Options' (faEllipsisV) */}
+          {/* Bottom Icons */}
           <div className="flex flex-col items-center space-y-2 mb-2">
             <button onClick={toggleSettings} className="text-gray-400 text-xl hover:text-white transition-colors duration-200" title="Settings">
               <FontAwesomeIcon icon={faCog} />
@@ -291,9 +328,11 @@ function Room() {
             <button onClick={toggleParticipants} className="text-gray-400 text-xl hover:text-white transition-colors duration-200" title="Participants">
               <FontAwesomeIcon icon={faUserFriends} />
             </button>
-            {/* faEllipsisV (More Options) removed here */}
           </div>
         </div>
+
+        {/* EMOJI PICKER RENDERING */}
+        {isEmojiPickerOpen && <EmojiPicker />}
 
         {/* Video Grid (UNCHANGED) */}
         <div 
