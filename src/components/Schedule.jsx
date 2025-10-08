@@ -98,7 +98,8 @@ function Schedule() {
           color: "white",
         }}
       >
-        <h2 style={{ textAlign: "center", marginBottom: "1.5rem", color: "#E8E7E5" }}>
+        <h2 style={{ textAlign: "center", marginBottom: "1.5rem", color: "#E8E7E5",fontSize: "1.8rem", 
+            fontWeight: "bold" }}>
           Schedule A Meet
         </h2>
         <form onSubmit={handleSubmit}>
