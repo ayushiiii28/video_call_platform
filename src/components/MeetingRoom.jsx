@@ -50,7 +50,7 @@ function Room() {
     { id: 103, name: "Charlie", videoUrl: "https://placehold.co/600x400/FFD700/000000?text=Charlie" },
   ];
 
-  // Get user media and devices (FIXED LOGIC)
+  // Get user media and devices (unchanged from last correct functional version)
   useEffect(() => {
     if (!name) {
       navigate(`/prejoin/${roomId}`);
@@ -74,16 +74,13 @@ function Room() {
     };
 
     const getStream = async (micId) => {
-      // Always stop the old stream before getting a new one (only runs if dependencies change)
       if (stream) {
           stream.getTracks().forEach(track => track.stop());
       }
       
       try {
-        // FIX: Always request both video and audio tracks if available. 
-        // We will enable/disable them later based on state.
         const newStream = await navigator.mediaDevices.getUserMedia({
-          video: true, // Request video 
+          video: true, 
           audio: {
             deviceId: micId ? { exact: micId } : undefined,
             noiseSuppression,
@@ -105,15 +102,13 @@ function Room() {
         gainNodeRef.current.connect(audioContextRef.current.destination);
         gainNodeRef.current.gain.value = localVolume;
 
-        // FIX: Now that we requested the tracks, set their initial enabled state
         const audioTrack = newStream.getAudioTracks()[0];
-        if (audioTrack) audioTrack.enabled = mic; // Respect the mic state
+        if (audioTrack) audioTrack.enabled = mic; 
         const videoTrack = newStream.getVideoTracks()[0];
-        if (videoTrack) videoTrack.enabled = camera; // Respect the camera state
+        if (videoTrack) videoTrack.enabled = camera; 
 
       } catch (error) {
         console.error("Error accessing media devices.", error);
-        // If getting the stream fails, set both states to false to show the user the problem
         setCamera(false);
         setMic(false);
       }
@@ -132,19 +127,15 @@ function Room() {
       if (stream) stream.getTracks().forEach(track => track.stop());
       if (audioContextRef.current) audioContextRef.current.close();
     };
-  // FIX: Dependencies now only include things that *require* a new stream: name, device IDs, volume, and noise suppression. 
-  // 'mic' and 'camera' are handled internally by the tracks and are NOT in the dependency array.
   }, [name, selectedMic, localVolume, noiseSuppression, navigate, roomId]); 
 
-  // Toggles 
+  // Toggles and Handlers (unchanged)
   const toggleChat = () => setIsChatOpen(prev => !prev);
   const toggleScreenShare = () => setIsScreenSharing(prev => !prev);
   const toggleSettings = () => setIsSettingsOpen(prev => !prev);
   const toggleParticipants = () => setIsParticipantsOpen(prev => !prev);
   const toggleEmojiPicker = () => setIsEmojiPickerOpen(prev => !prev);
 
-
-  // Reaction & Hand Raise Functions (UNCHANGED)
   const sendReaction = (reaction) => {
     console.log(`Sending reaction: ${reaction}`);
     setIsEmojiPickerOpen(false); 
@@ -160,38 +151,32 @@ function Room() {
     console.log(`Hand is now ${!isHandRaised ? 'raised' : 'lowered'}`);
   };
 
-  // Camera Toggle (FIXED - relies on tracks created in useEffect)
   const toggleCamera = () => {
     if (stream) {
       const videoTrack = stream.getVideoTracks()[0];
       if (videoTrack) {
         videoTrack.enabled = !camera;
         setCamera(prev => !prev);
-        return; // Exit if track was successfully toggled
+        return; 
       }
     }
-    // Fallback: update state even if stream is not ready/available
     setCamera(prev => !prev);
   };
 
-  // Mic Toggle (FIXED - relies on tracks created in useEffect)
   const toggleMic = () => {
     if (stream) {
       const audioTrack = stream.getAudioTracks()[0];
       if (audioTrack) {
         audioTrack.enabled = !mic;
         setMic(prev => !prev);
-        return; // Exit if track was successfully toggled
+        return; 
       }
     }
-    // Fallback: update state even if stream is not ready/available
     setMic(prev => !prev);
   };
   
-  // Audio handlers (unchanged)
   const handleAudioInputChange = (e) => {
     setSelectedMic(e.target.value);
-    // Note: Changing selectedMic triggers a full stream reload via useEffect dependency
   };
 
   const handleAudioOutputChange = async (e) => {
@@ -290,7 +275,7 @@ function Room() {
 
       {/* Main Content */}
       <div className="flex flex-1 overflow-hidden">
-        {/* Left Sidebar */}
+        {/* Left Sidebar (unchanged) */}
         <div className="flex flex-col w-[50px] p-1 bg-[#1E1F21] items-center justify-between flex-shrink-0 h-full">
           {/* Top Icons */}
           <div className="flex flex-col items-center space-y-4 mt-2">
@@ -369,11 +354,19 @@ function Room() {
               className={itemClass}
             >
               {user.id === 'me' ? (
-                // Video element with object-contain
-                <video ref={userVideo} autoPlay muted playsInline className="w-full h-full object-contain" />
+                // FIX 1: Reverting to object-cover to ensure full coverage (no black bars).
+                <video ref={userVideo} autoPlay muted playsInline className="w-full h-full object-cover" />
               ) : (
                 <img src={user.videoUrl} alt={user.name} className="w-full h-full object-cover" />
               )}
+
+              {/* FIX 2: Overlay for "Camera Off" status to prevent a confusing black tile */}
+              {user.id === 'me' && !camera && (
+                <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-70">
+                    <span className="text-white text-lg font-semibold">Camera Off</span>
+                </div>
+              )}
+
               <div className="absolute bottom-2 left-2 text-white bg-black bg-opacity-50 px-2 py-1 rounded-md text-sm">{user.name}</div>
             </div>
           ))}
