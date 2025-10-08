@@ -7,8 +7,8 @@ import Recording from "./Recording";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { 
   faSmileWink, faHandPaper, 
-  faVideo, faVideoSlash, // NEW: Video Slash
-  faMicrophone, faMicrophoneSlash, // NEW: Mic Slash
+  faVideo, faVideoSlash, 
+  faMicrophone, faMicrophoneSlash, 
   faCommentDots, faDesktop, faUserFriends, faCog, faShareAlt, faTimes
 } from '@fortawesome/free-solid-svg-icons';
 
@@ -50,7 +50,7 @@ function Room() {
     { id: 103, name: "Charlie", videoUrl: "https://placehold.co/600x400/FFD700/000000?text=Charlie" },
   ];
 
-  // Get user media and devices (unchanged logic)
+  // Get user media and devices (FIXED LOGIC)
   useEffect(() => {
     if (!name) {
       navigate(`/prejoin/${roomId}`);
@@ -74,9 +74,16 @@ function Room() {
     };
 
     const getStream = async (micId) => {
+      // Always stop the old stream before getting a new one (only runs if dependencies change)
+      if (stream) {
+          stream.getTracks().forEach(track => track.stop());
+      }
+      
       try {
+        // FIX: Always request both video and audio tracks if available. 
+        // We will enable/disable them later based on state.
         const newStream = await navigator.mediaDevices.getUserMedia({
-          video: camera,
+          video: true, // Request video 
           audio: {
             deviceId: micId ? { exact: micId } : undefined,
             noiseSuppression,
@@ -98,19 +105,23 @@ function Room() {
         gainNodeRef.current.connect(audioContextRef.current.destination);
         gainNodeRef.current.gain.value = localVolume;
 
+        // FIX: Now that we requested the tracks, set their initial enabled state
         const audioTrack = newStream.getAudioTracks()[0];
-        if (audioTrack) audioTrack.enabled = mic;
+        if (audioTrack) audioTrack.enabled = mic; // Respect the mic state
         const videoTrack = newStream.getVideoTracks()[0];
-        if (videoTrack) videoTrack.enabled = camera;
+        if (videoTrack) videoTrack.enabled = camera; // Respect the camera state
+
       } catch (error) {
         console.error("Error accessing media devices.", error);
+        // If getting the stream fails, set both states to false to show the user the problem
+        setCamera(false);
+        setMic(false);
       }
     };
 
     getDevices();
     getStream(selectedMic);
     
-    // Simulate multiple participants joining for testing the grid
     const joinRequestTimer = setTimeout(() => {
         setPendingParticipants(mockJoinRequests);
         setParticipants(prev => [...prev, mockJoinRequests[0]]);
@@ -121,7 +132,9 @@ function Room() {
       if (stream) stream.getTracks().forEach(track => track.stop());
       if (audioContextRef.current) audioContextRef.current.close();
     };
-  }, [name, camera, mic, selectedMic, localVolume, noiseSuppression, navigate, roomId]);
+  // FIX: Dependencies now only include things that *require* a new stream: name, device IDs, volume, and noise suppression. 
+  // 'mic' and 'camera' are handled internally by the tracks and are NOT in the dependency array.
+  }, [name, selectedMic, localVolume, noiseSuppression, navigate, roomId]); 
 
   // Toggles 
   const toggleChat = () => setIsChatOpen(prev => !prev);
@@ -131,7 +144,7 @@ function Room() {
   const toggleEmojiPicker = () => setIsEmojiPickerOpen(prev => !prev);
 
 
-  // Reaction & Hand Raise Functions
+  // Reaction & Hand Raise Functions (UNCHANGED)
   const sendReaction = (reaction) => {
     console.log(`Sending reaction: ${reaction}`);
     setIsEmojiPickerOpen(false); 
@@ -147,30 +160,38 @@ function Room() {
     console.log(`Hand is now ${!isHandRaised ? 'raised' : 'lowered'}`);
   };
 
+  // Camera Toggle (FIXED - relies on tracks created in useEffect)
   const toggleCamera = () => {
     if (stream) {
       const videoTrack = stream.getVideoTracks()[0];
       if (videoTrack) {
-        videoTrack.enabled = !videoTrack.enabled;
-        setCamera(videoTrack.enabled);
+        videoTrack.enabled = !camera;
+        setCamera(prev => !prev);
+        return; // Exit if track was successfully toggled
       }
     }
+    // Fallback: update state even if stream is not ready/available
+    setCamera(prev => !prev);
   };
 
+  // Mic Toggle (FIXED - relies on tracks created in useEffect)
   const toggleMic = () => {
     if (stream) {
       const audioTrack = stream.getAudioTracks()[0];
       if (audioTrack) {
-        audioTrack.enabled = !audioTrack.enabled;
-        setMic(audioTrack.enabled);
+        audioTrack.enabled = !mic;
+        setMic(prev => !prev);
+        return; // Exit if track was successfully toggled
       }
     }
+    // Fallback: update state even if stream is not ready/available
+    setMic(prev => !prev);
   };
   
   // Audio handlers (unchanged)
   const handleAudioInputChange = (e) => {
     setSelectedMic(e.target.value);
-    if (stream) stream.getTracks().forEach(track => track.stop());
+    // Note: Changing selectedMic triggers a full stream reload via useEffect dependency
   };
 
   const handleAudioOutputChange = async (e) => {
@@ -195,7 +216,7 @@ function Room() {
   };
   const handleDeny = (userToDeny) => setPendingParticipants(prev => prev.filter(u => u.id !== userToDeny.id));
 
-  // Function to determine GRID CONTAINER classes based on participant count (UNCHANGED)
+  // Grid classes (UNCHANGED)
   const getGridContainerClass = (count) => {
     if (count === 1) {
         return "flex items-center justify-center";
@@ -212,7 +233,6 @@ function Room() {
     }
   };
 
-  // Function to determine GRID ITEM classes (UNCHANGED)
   const getGridItemClass = (count) => {
       const baseClasses = "relative bg-[#1E1F21] rounded-xl overflow-hidden shadow-2xl w-full h-full";
       if (count === 1) {
@@ -270,14 +290,15 @@ function Room() {
 
       {/* Main Content */}
       <div className="flex flex-1 overflow-hidden">
-        {/* Left Sidebar - UPDATED CAMERA AND MIC ICONS */}
+        {/* Left Sidebar */}
         <div className="flex flex-col w-[50px] p-1 bg-[#1E1F21] items-center justify-between flex-shrink-0 h-full">
           {/* Top Icons */}
-          <div className="flex flex-col items-center space-y-2 mt-2">
+          <div className="flex flex-col items-center space-y-4 mt-2">
+            
             {/* Reaction Icon */}
             <button 
               onClick={toggleEmojiPicker} 
-              className={`text-xl transition-colors duration-200 ${isEmojiPickerOpen ? 'text-white' : 'text-gray-400 hover:text-white'}`} 
+              className={`text-2xl transition-colors duration-200 ${isEmojiPickerOpen ? 'text-white' : 'text-gray-400 hover:text-white'}`} 
               title="Send Reaction"
             >
               <FontAwesomeIcon icon={faSmileWink} />
@@ -286,37 +307,37 @@ function Room() {
             {/* Hand Raise Icon */}
             <button 
               onClick={toggleHandRaise} 
-              className={`text-xl transition-colors duration-200 ${isHandRaised ? 'text-yellow-400' : 'text-gray-400 hover:text-white'}`} 
+              className={`text-2xl transition-colors duration-200 ${isHandRaised ? 'text-yellow-400' : 'text-gray-400 hover:text-white'}`} 
               title={isHandRaised ? "Lower Hand" : "Raise Hand"}
             >
               <FontAwesomeIcon icon={faHandPaper} />
             </button>
             
-            {/* Camera Toggle - CONDITIONAL ICON */}
+            {/* Camera Toggle */}
             <button 
               onClick={toggleCamera} 
-              className={`text-xl transition-colors duration-200 ${camera ? 'text-white' : 'text-red-500'} hover:text-white`} 
+              className={`text-2xl transition-colors duration-200 ${camera ? 'text-white' : 'text-red-500'} hover:text-white`} 
               title={camera ? "Turn Camera Off" : "Turn Camera On"}
             >
               <FontAwesomeIcon icon={camera ? faVideo : faVideoSlash} />
             </button>
             
-            {/* Mic Toggle - CONDITIONAL ICON */}
+            {/* Mic Toggle */}
             <button 
               onClick={toggleMic} 
-              className={`text-xl transition-colors duration-200 ${mic ? 'text-white' : 'text-red-500'} hover:text-white`} 
+              className={`text-2xl transition-colors duration-200 ${mic ? 'text-white' : 'text-red-500'} hover:text-white`} 
               title={mic ? "Turn Mic Off" : "Turn Mic On"}
             >
               <FontAwesomeIcon icon={mic ? faMicrophone : faMicrophoneSlash} />
             </button>
             
             {/* Screen Share Toggle */}
-            <button onClick={toggleScreenShare} className={`text-xl transition-colors duration-200 ${isScreenSharing ? 'text-white' : 'text-gray-400 hover:text-white'}`} title="Screen Share">
+            <button onClick={toggleScreenShare} className={`text-2xl transition-colors duration-200 ${isScreenSharing ? 'text-white' : 'text-gray-400 hover:text-white'}`} title="Screen Share">
               <FontAwesomeIcon icon={faDesktop} />
             </button>
             
             {/* Chat Toggle */}
-            <button onClick={toggleChat} className={`text-xl transition-colors duration-200 ${isChatOpen ? 'text-white' : 'text-gray-400 hover:text-white'}`} title="Chat">
+            <button onClick={toggleChat} className={`text-2xl transition-colors duration-200 ${isChatOpen ? 'text-white' : 'text-gray-400 hover:text-white'}`} title="Chat">
               <FontAwesomeIcon icon={faCommentDots} />
             </button>
             <Recording stream={stream} />
@@ -324,12 +345,12 @@ function Room() {
 
           <button onClick={() => { if(stream) stream.getTracks().forEach(t => t.stop()); navigate(`/prejoin/${roomId}`); }} className="w-full p-1 text-xs bg-red-600 text-white font-bold rounded-lg hover:bg-red-700">Leave</button>
 
-          {/* Bottom Icons (unchanged) */}
-          <div className="flex flex-col items-center space-y-2 mb-2">
-            <button onClick={toggleSettings} className="text-gray-400 text-xl hover:text-white transition-colors duration-200" title="Settings">
+          {/* Bottom Icons */}
+          <div className="flex flex-col items-center space-y-4 mb-2">
+            <button onClick={toggleSettings} className="text-2xl text-gray-400 hover:text-white transition-colors duration-200" title="Settings">
               <FontAwesomeIcon icon={faCog} />
             </button>
-            <button onClick={toggleParticipants} className="text-gray-400 text-xl hover:text-white transition-colors duration-200" title="Participants">
+            <button onClick={toggleParticipants} className="text-2xl text-gray-400 hover:text-white transition-colors duration-200" title="Participants">
               <FontAwesomeIcon icon={faUserFriends} />
             </button>
           </div>
@@ -338,7 +359,7 @@ function Room() {
         {/* EMOJI PICKER RENDERING */}
         {isEmojiPickerOpen && <EmojiPicker />}
 
-        {/* Video Grid (unchanged) */}
+        {/* Video Grid */}
         <div 
           className={`flex-1 transition-all duration-300 ${isChatOpen || isParticipantsOpen ? 'mr-80' : 'mr-0'} p-2 h-full w-full gap-2 ${containerClass}`}
         >
@@ -348,7 +369,8 @@ function Room() {
               className={itemClass}
             >
               {user.id === 'me' ? (
-                <video ref={userVideo} autoPlay muted playsInline className="w-full h-full object-cover" />
+                // Video element with object-contain
+                <video ref={userVideo} autoPlay muted playsInline className="w-full h-full object-contain" />
               ) : (
                 <img src={user.videoUrl} alt={user.name} className="w-full h-full object-cover" />
               )}
