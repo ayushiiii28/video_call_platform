@@ -21,18 +21,18 @@ function Login() {
       {/* Left (Login) Section - Smaller and shifted right */}
       <div className="w-[400px] h-[500px] flex flex-col items-center justify-center ml-48 mt-40">
         
-        {/* App Title - Changed text color to black */}
-        <h1 className="text-4xl font-bold mb-10 text-black self-start ml-2">Zynthora AI</h1>
+        {/* App Title - Updated style as requested: color: black, fontSize: 2rem */}
+        <h2 style={{ color: "black", marginBottom: "1rem", fontSize: "2rem" }} className="font-bold self-start ml-2">Zynthora AI</h2>
         
         {/* Login Form Box - Changed background to #778AEB (dark blue) and adjusted inner colors for visibility */}
         <div className="bg-[#778AEB] backdrop-blur-sm p-10 rounded-2xl shadow-2xl shadow-black/40 w-full h-full flex flex-col justify-center space-y-6 border border-white/20">
           
-          {/* Login Heading - Changed text color to black */}
+          {/* Login Heading - Text color set to black (low contrast, as per previous request) */}
           <h2 className="text-2xl font-semibold text-black text-center">Login</h2>
           
           <div className="w-full space-y-5">
             <div>
-              {/* Label - Changed text color to black/80 */}
+              {/* Label - Text color set to black/80 (low contrast, as per previous request) */}
               <label className="block text-sm font-medium text-black/80 mb-2">Username</label>
               <input
                 type="text"
@@ -45,7 +45,7 @@ function Login() {
             </div>
             
             <div>
-              {/* Label - Changed text color to black/80 */}
+              {/* Label - Text color set to black/80 (low contrast, as per previous request) */}
               <label className="block text-sm font-medium text-black/80 mb-2">Password</label>
               <input
                 type="password"
@@ -57,13 +57,13 @@ function Login() {
               />
             </div>
             
-            {/* Link - Changed text color to black/70 and hover to black */}
+            {/* Link - Text color set to black/70 (low contrast, as per previous request) */}
             <a href="#" className="block text-sm text-black/70 hover:text-black transition-colors duration-200 text-center mt-1">
               Forgot Password?
             </a>
           </div>
           
-          {/* Login Button - Changed text/border color to black and hover state */}
+          {/* Login Button - Text/border color set to black (low contrast, as per previous request) */}
           <button
             onClick={handleLogin}
             className="w-[364px] h-[60px] mt-2 px-6 py-3 text-black rounded-lg border-2 border-black bg-transparent font-semibold text-lg hover:bg-black/10 transition-all duration-300 transform hover:scale-105 active:scale-95 self-center"
