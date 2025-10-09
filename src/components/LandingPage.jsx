@@ -43,7 +43,7 @@ function LandingPage() {
         justifyContent: "space-between",
         alignItems: "center",
         height: "100vh",
-        backgroundColor: "#1D2C2A",
+        backgroundColor: "#A3AFEF", // Main background color
         color: "white",
         fontFamily: "Arial, sans-serif",
       }}
@@ -60,12 +60,12 @@ function LandingPage() {
           width: "50%",
         }}
       >
-        <h2 style={{ color: "#E8E7E5", marginBottom: "1rem" }}>Zynthora AI</h2>
+        <h2 style={{ color: "black", marginBottom: "1rem" }}>Zynthora AI</h2> {/* Black */}
         <h1
           style={{
             fontSize: "4rem",
             fontWeight: "bold",
-            color: "#6D8A78",
+            color: "white", // White
             textAlign: "left",
             margin: "2rem 0",
             lineHeight: "1.2",
@@ -82,9 +82,9 @@ function LandingPage() {
               padding: "0.5rem 2rem",
               fontSize: "1rem",
               borderRadius: "5px",
-              border: "1px solid #E8E7E5",
-              backgroundColor: "#1D2C2A",
-              color: "#E8E7E5",
+              border: "1px solid black",
+              backgroundColor: "black", // Sign Up button is black
+              color: "white",
               cursor: "pointer",
             }}
           >
@@ -96,9 +96,9 @@ function LandingPage() {
               padding: "0.5rem 2rem",
               fontSize: "1rem",
               borderRadius: "5px",
-              border: "1px solid #E8E7E5",
-              backgroundColor: "#1D2C2A",
-              color: "#E8E7E5",
+              border: "1px solid #1E1E1E",
+              backgroundColor: "#1E1E1E", // Log In button is #1E1E1E
+              color: "white",
               cursor: "pointer",
             }}
           >
@@ -108,7 +108,7 @@ function LandingPage() {
 
         {/* Meeting code input and instant meeting button */}
         <div style={{ marginTop: "2rem" }}>
-          <h3 style={{ color: "#6D8A78", marginBottom: "0.5rem" }}>
+          <h3 style={{ color: "black", marginBottom: "0.5rem" }}> {/* Black */}
             Meeting Code:
           </h3>
           <form onSubmit={handleJoinRoom} style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
@@ -123,8 +123,8 @@ function LandingPage() {
                 height: "40px",
                 borderRadius: "5px",
                 border: "none",
-                backgroundColor: "#2E4242",
-                color: "white",
+                backgroundColor: "#C3CCFC", // Adjusted secondary color
+                color: "black", // Input text color
               }}
             />
             <button
@@ -133,9 +133,9 @@ function LandingPage() {
                 padding: "0.5rem 2rem",
                 fontSize: "1rem",
                 borderRadius: "5px",
-                border: "1px solid #E8E7E5",
-                backgroundColor: "#1D2C2A",
-                color: "#E8E7E5",
+                border: "1px solid #1E1E1E", // Changed border to match button color
+                backgroundColor: "#1E1E1E", // Join button is #1E1E1E
+                color: "white", // Changed text color to white for contrast
                 cursor: "pointer",
               }}
             >
@@ -154,7 +154,7 @@ function LandingPage() {
               fontSize: "1.2rem",
               borderRadius: "5px",
               border: "none",
-              backgroundColor: "#6D8A78",
+              backgroundColor: "black", // Start instant meeting button is black
               color: "white",
               cursor: "pointer",
             }}
@@ -169,8 +169,8 @@ function LandingPage() {
               fontSize: "1.2rem",
               borderRadius: "5px",
               border: "none",
-              backgroundColor: "#2E4242", // A complementary color
-              color: "white",
+              backgroundColor: "#1E1E1E", // Schedule Meet button is #1E1E1E
+              color: "white", // Changed text color to white for contrast
               cursor: "pointer",
             }}
           >
