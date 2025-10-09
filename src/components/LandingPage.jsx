@@ -60,7 +60,7 @@ function LandingPage() {
           width: "50%",
         }}
       >
-        <h2 style={{ color: "black", marginBottom: "1rem" }}>Zynthora AI</h2> {/* Black */}
+        <h2 style={{ color: "black", marginBottom: "1rem", fontSize: "2rem" }}>Zynthora AI</h2> {/* Increased fontSize to 2rem */}
         <h1
           style={{
             fontSize: "4rem",
@@ -123,7 +123,7 @@ function LandingPage() {
                 height: "40px",
                 borderRadius: "5px",
                 border: "none",
-                backgroundColor: "#C3CCFC", // Adjusted secondary color
+                backgroundColor: "white", // White
                 color: "black", // Input text color
               }}
             />
@@ -133,9 +133,9 @@ function LandingPage() {
                 padding: "0.5rem 2rem",
                 fontSize: "1rem",
                 borderRadius: "5px",
-                border: "1px solid #1E1E1E", // Changed border to match button color
+                border: "1px solid #1E1E1E",
                 backgroundColor: "#1E1E1E", // Join button is #1E1E1E
-                color: "white", // Changed text color to white for contrast
+                color: "white",
                 cursor: "pointer",
               }}
             >
@@ -170,7 +170,7 @@ function LandingPage() {
               borderRadius: "5px",
               border: "none",
               backgroundColor: "#1E1E1E", // Schedule Meet button is #1E1E1E
-              color: "white", // Changed text color to white for contrast
+              color: "white",
               cursor: "pointer",
             }}
           >
