@@ -6,6 +6,19 @@ const tailwindScript = document.createElement("script");
 tailwindScript.src = "https://cdn.tailwindcss.com";
 document.head.appendChild(tailwindScript);
 
+// Define the list of European languages for the dropdown
+const EUROPEAN_LANGUAGES = [
+  { code: 'en', name: 'English' },
+  { code: 'fr', name: 'French' },
+  { code: 'es', name: 'Spanish' },
+  { code: 'de', name: 'German' },
+  { code: 'it', name: 'Italian' },
+  { code: 'pt', name: 'Portuguese' },
+  { code: 'nl', name: 'Dutch' },
+  { code: 'ru', name: 'Russian' },
+  { code: 'pl', name: 'Polish' },
+];
+
 function PreJoin() {
   const { roomId } = useParams();
   const [name, setName] = useState("");
@@ -19,6 +32,8 @@ function PreJoin() {
   const [selectedAudioOutput, setSelectedAudioOutput] = useState("");
   const [isNoiseSuppressionOn, setIsNoiseSuppressionOn] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
+  // New state for language selection, defaulting to the first language
+  const [selectedLanguage, setSelectedLanguage] = useState(EUROPEAN_LANGUAGES[0].code); 
   const userVideo = useRef();
   const navigate = useNavigate();
   const audioContextRef = useRef(null);
@@ -182,13 +197,20 @@ function PreJoin() {
     getStream(selectedAudioInput);
   };
 
+  // New handler for language change
+  const handleLanguageChange = (e) => {
+    setSelectedLanguage(e.target.value);
+    // In a real application, you'd update the UI strings here
+  };
+
   const joinRoom = () => {
     if (!name) {
       setErrorMessage("Please enter your name.");
       return;
     }
     setErrorMessage("");
-    navigate(`/room/${roomId}`, { state: { name, cameraOn, micOn, selectedAudioInput, selectedAudioOutput, isNoiseSuppressionOn } });
+    // Pass selectedLanguage to the next page if needed
+    navigate(`/room/${roomId}`, { state: { name, cameraOn, micOn, selectedAudioInput, selectedAudioOutput, isNoiseSuppressionOn, selectedLanguage } });
   };
 
   return (
@@ -208,8 +230,24 @@ function PreJoin() {
 
       {/* Main Content Area */}
       <div className="flex flex-col md:flex-row flex-1 p-8 justify-center items-center md:space-x-8 space-y-8 md:space-y-0">
-        {/* Left Sidebar */}
+        {/* Left Sidebar - Language Dropdown added here */}
         <div className="flex flex-col items-start p-4 bg-[#2E4242] rounded-xl shadow-lg w-full md:w-1/4 min-w-[200px] space-y-4">
+          
+          {/* Language Selection Dropdown */}
+          <label className="block text-sm font-medium">Select your language</label>
+          <select
+            value={selectedLanguage}
+            onChange={handleLanguageChange}
+            className="mt-1 block w-full rounded-md shadow-sm bg-gray-700 border-gray-600 focus:border-[#6D8A78] focus:ring focus:ring-[#6D8A78] focus:ring-opacity-50 text-white p-2"
+          >
+            {EUROPEAN_LANGUAGES.map((lang) => (
+              <option key={lang.code} value={lang.code}>
+                {lang.name}
+              </option>
+            ))}
+          </select>
+          {/* End of Language Selection Dropdown */}
+
           <h3 className="text-xl font-semibold">Already in meet:</h3>
           <div className="w-full flex flex-col items-center justify-center p-4 bg-[#1E1F21] rounded-lg mb-4">
             {joinedUsers.length > 0 ? (
