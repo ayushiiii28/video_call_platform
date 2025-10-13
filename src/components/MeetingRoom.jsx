@@ -10,8 +10,11 @@ import {
   faVideo, faVideoSlash, 
   faMicrophone, faMicrophoneSlash, 
   faCommentDots, faDesktop, faUserFriends, faCog, faShareAlt, faTimes,
-  faSignOutAlt, faLanguage // ✅ Added Translation icon
+  faSignOutAlt, faLanguage
 } from '@fortawesome/free-solid-svg-icons';
+
+// Define the global variable for the original user stream to restore it later
+let localUserStream = null; 
 
 function Room() {
   const { roomId } = useParams();
@@ -25,7 +28,7 @@ function Room() {
   const [pendingParticipants, setPendingParticipants] = useState([]);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isScreenSharing, setIsScreenSharing] = useState(false);
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false); // <--- State used for rendering the new box
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isParticipantsOpen, setIsParticipantsOpen] = useState(false);
   const [isHandRaised, setIsHandRaised] = useState(false); 
   const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
@@ -50,6 +53,53 @@ function Room() {
     { id: 103, name: "Charlie", videoUrl: "https://placehold.co/600x400/FFD700/000000?text=Charlie" },
   ];
 
+  // Function to get the user's camera/mic stream
+  const getStream = async (micId, video = true) => {
+    // Stop existing tracks
+    if (stream) {
+      stream.getTracks().forEach(track => track.stop());
+    }
+    
+    try {
+      const newStream = await navigator.mediaDevices.getUserMedia({
+        video: video, 
+        audio: {
+          deviceId: micId ? { exact: micId } : undefined,
+          noiseSuppression,
+          echoCancellation: true,
+        },
+      });
+      
+      setStream(newStream);
+      if (userVideo.current) userVideo.current.srcObject = newStream;
+
+      // Setup Audio Context for volume control
+      if (audioContextRef.current) {
+        sourceNodeRef.current.disconnect();
+        gainNodeRef.current.disconnect();
+      }
+      audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
+      sourceNodeRef.current = audioContextRef.current.createMediaStreamSource(newStream);
+      gainNodeRef.current = audioContextRef.current.createGain();
+      sourceNodeRef.current.connect(gainNodeRef.current);
+      gainNodeRef.current.connect(audioContextRef.current.destination);
+      gainNodeRef.current.gain.value = localVolume;
+
+      // Apply initial toggle states
+      const audioTrack = newStream.getAudioTracks()[0];
+      if (audioTrack) audioTrack.enabled = mic; 
+      const videoTrack = newStream.getVideoTracks()[0];
+      if (videoTrack) videoTrack.enabled = camera; 
+      
+      return newStream; // Return the new stream
+    } catch (error) {
+      console.error("Error accessing media devices.", error);
+      setCamera(false);
+      setMic(false);
+    }
+  };
+
+
   useEffect(() => {
     if (!name) {
       navigate(`/prejoin/${roomId}`);
@@ -72,47 +122,12 @@ function Room() {
       }
     };
 
-    const getStream = async (micId) => {
-      if (stream) stream.getTracks().forEach(track => track.stop());
-      
-      try {
-        const newStream = await navigator.mediaDevices.getUserMedia({
-          video: true, 
-          audio: {
-            deviceId: micId ? { exact: micId } : undefined,
-            noiseSuppression,
-            echoCancellation: true,
-          },
-        });
-        setStream(newStream);
-        if (userVideo.current) userVideo.current.srcObject = newStream;
-
-        if (audioContextRef.current) {
-          sourceNodeRef.current.disconnect();
-          gainNodeRef.current.disconnect();
-        }
-        audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
-        sourceNodeRef.current = audioContextRef.current.createMediaStreamSource(newStream);
-        gainNodeRef.current = audioContextRef.current.createGain();
-        sourceNodeRef.current.connect(gainNodeRef.current);
-        gainNodeRef.current.connect(audioContextRef.current.destination);
-        gainNodeRef.current.gain.value = localVolume;
-
-        const audioTrack = newStream.getAudioTracks()[0];
-        if (audioTrack) audioTrack.enabled = mic; 
-        const videoTrack = newStream.getVideoTracks()[0];
-        if (videoTrack) videoTrack.enabled = camera; 
-
-      } catch (error) {
-        console.error("Error accessing media devices.", error);
-        setCamera(false);
-        setMic(false);
-      }
-    };
-
+    // Get initial stream and store it globally for restoration after screen sharing
     getDevices();
-    getStream(selectedMic);
-    
+    (async () => {
+        localUserStream = await getStream(selectedMic);
+    })();
+    
     const joinRequestTimer = setTimeout(() => {
         setPendingParticipants(mockJoinRequests);
         setParticipants(prev => [...prev, mockJoinRequests[0]]);
@@ -120,16 +135,83 @@ function Room() {
 
     return () => {
       clearTimeout(joinRequestTimer);
+      // Stop tracks on unmount. Check localUserStream too if screen share stopped it.
       if (stream) stream.getTracks().forEach(track => track.stop());
+      if (localUserStream) localUserStream.getTracks().forEach(track => track.stop());
       if (audioContextRef.current) audioContextRef.current.close();
     };
   }, [name, selectedMic, localVolume, noiseSuppression, navigate, roomId]); 
 
   const toggleChat = () => setIsChatOpen(prev => !prev);
-  const toggleScreenShare = () => setIsScreenSharing(prev => !prev);
   const toggleSettings = () => setIsSettingsOpen(prev => !prev);
   const toggleParticipants = () => setIsParticipantsOpen(prev => !prev);
   const toggleEmojiPicker = () => setIsEmojiPickerOpen(prev => !prev);
+
+  // 1. UPDATED toggleScreenShare FUNCTION
+  const toggleScreenShare = async () => {
+    if (!isScreenSharing) {
+      // Start Screen Sharing
+      try {
+        // Capture the screen (video) and optional system audio (audio)
+        const screenStream = await navigator.mediaDevices.getDisplayMedia({
+          video: true,
+          audio: true // To capture system audio if permitted
+        });
+
+        // Capture the original microphone track from the user's camera stream
+        const originalAudioTrack = localUserStream?.getAudioTracks()[0];
+        
+        // Replace the screen stream's audio track (if any) with the microphone track
+        // This ensures others hear the user's voice, not just system audio, or use the camera stream's audio.
+        if (originalAudioTrack) {
+            screenStream.getTracks().forEach(track => {
+                if (track.kind === 'audio') track.stop(); // Stop any system audio track
+            });
+            screenStream.addTrack(originalAudioTrack);
+        }
+        
+        // Set the main stream to the screen stream
+        setStream(screenStream);
+        if (userVideo.current) userVideo.current.srcObject = screenStream;
+
+        // Listen for the screen share 'ended' event (e.g., user clicks Stop Sharing in browser UI)
+        screenStream.getVideoTracks()[0].onended = () => {
+          // Stop the screen share and restore the camera stream
+          toggleScreenShare(); 
+        };
+
+        setIsScreenSharing(true);
+        console.log("Screen sharing started.");
+
+      } catch (error) {
+        console.error("Error starting screen share:", error);
+        setIsScreenSharing(false);
+      }
+    } else {
+      // Stop Screen Sharing
+      if (stream) {
+        stream.getTracks().forEach(track => {
+            // Stop only the screen share tracks (video)
+            if (track.kind === 'video' && track.label.includes('screen')) {
+                track.stop();
+            }
+        });
+      }
+      
+      // Restore the original camera stream
+      if (localUserStream) {
+          setStream(localUserStream);
+          if (userVideo.current) userVideo.current.srcObject = localUserStream;
+          // Re-apply mute status since we are reusing the stream object
+          const audioTrack = localUserStream.getAudioTracks()[0];
+          if (audioTrack) audioTrack.enabled = mic; 
+      }
+      
+      setIsScreenSharing(false);
+      console.log("Screen sharing stopped.");
+    }
+  };
+
 
   const sendReaction = (reaction) => {
     console.log(`Sending reaction: ${reaction}`);
@@ -144,8 +226,8 @@ function Room() {
   };
 
   const toggleCamera = () => {
-    if (stream) {
-      const videoTrack = stream.getVideoTracks()[0];
+    if (localUserStream) {
+      const videoTrack = localUserStream.getVideoTracks()[0];
       if (videoTrack) {
         videoTrack.enabled = !camera;
         setCamera(prev => !prev);
@@ -156,8 +238,8 @@ function Room() {
   };
 
   const toggleMic = () => {
-    if (stream) {
-      const audioTrack = stream.getAudioTracks()[0];
+    if (localUserStream) {
+      const audioTrack = localUserStream.getAudioTracks()[0];
       if (audioTrack) {
         audioTrack.enabled = !mic;
         setMic(prev => !prev);
@@ -167,11 +249,7 @@ function Room() {
     setMic(prev => !prev);
   };
   
-  const handleAudioInputChange = (e) => {
-    setSelectedMic(e.target.value);
-    // Note: To make the change effective, you'd typically need to call getStream(e.target.value) here, 
-    // but the current useEffect hook already watches selectedMic, so it will re-run.
-};
+  const handleAudioInputChange = (e) => setSelectedMic(e.target.value);
   const handleAudioOutputChange = async (e) => {
     setSelectedSpeaker(e.target.value);
     if (userVideo.current && typeof userVideo.current.setSinkId === 'function') {
@@ -280,6 +358,7 @@ function Room() {
           </button>
 
           <div className="flex flex-col items-center space-y-4">
+            {/* The onClick for screen share is fixed here */}
             <button onClick={toggleScreenShare} className={`text-2xl ${isScreenSharing ? 'text-white' : 'text-gray-400 hover:text-white'}`} title="Screen Share">
               <FontAwesomeIcon icon={faDesktop} />
             </button>
@@ -287,7 +366,6 @@ function Room() {
               <FontAwesomeIcon icon={faCommentDots} />
             </button>
             <Recording stream={stream} /> 
-            {/* ✅ Added Translation Icon */}
             <button className="text-2xl text-gray-400 hover:text-white transition-colors duration-200" title="Translation">
               <FontAwesomeIcon icon={faLanguage} />
             </button>
@@ -297,7 +375,6 @@ function Room() {
           </div>
 
           <div className="flex flex-col items-center mb-2">
-            {/* The click handler for settings is already here */}
             <button onClick={toggleSettings} className="text-2xl text-gray-400 hover:text-white transition-colors duration-200" title="Settings">
               <FontAwesomeIcon icon={faCog} />
             </button>
