@@ -19,6 +19,15 @@ const EUROPEAN_LANGUAGES = [
   { code: 'pl', name: 'Polish' },
 ];
 
+// Define background options
+const BACKGROUND_OPTIONS = [
+  { code: 'none', name: 'None (Real Background)', color: 'bg-transparent' },
+  { code: 'blur-light', name: 'Light Blur', color: 'bg-blue-900/50 backdrop-blur-sm' },
+  { code: 'blur-heavy', name: 'Heavy Blur', color: 'bg-blue-900/80 backdrop-blur-md' },
+  { code: 'virtual-office', name: 'Virtual: Office', color: 'bg-[url("https://placehold.co/100x100/5E4028/ffffff?text=Office")] bg-cover' },
+  { code: 'virtual-beach', name: 'Virtual: Beach', color: 'bg-[url("https://placehold.co/100x100/7DAA9E/ffffff?text=Beach")] bg-cover' },
+];
+
 function PreJoin() {
   const { roomId } = useParams();
   const [name, setName] = useState("");
@@ -32,25 +41,23 @@ function PreJoin() {
   const [selectedAudioOutput, setSelectedAudioOutput] = useState("");
   const [isNoiseSuppressionOn, setIsNoiseSuppressionOn] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
-  // New state for language selection, defaulting to the first language
-  const [selectedLanguage, setSelectedLanguage] = useState(EUROPEAN_LANGUAGES[0].code); 
+  const [selectedLanguage, setSelectedLanguage] = useState(EUROPEAN_LANGUAGES[0].code); 
+  // New state for background effect, default to 'none'
+  const [selectedBackgroundEffect, setSelectedBackgroundEffect] = useState(BACKGROUND_OPTIONS[0].code); 
   const userVideo = useRef();
   const navigate = useNavigate();
   const audioContextRef = useRef(null);
   const sourceNodeRef = useRef(null);
   const gainNodeRef = useRef(null);
 
-  // Use state to manage the list of joined users dynamically
   const [joinedUsers, setJoinedUsers] = useState([]);
 
-  // Mock data for joined users
   const mockJoinedUsers = [
     { name: "Alex", avatar: "https://placehold.co/100x100/A0E7E5/ffffff?text=A" },
     { name: "Jordan", avatar: "https://placehold.co/100x100/C4A7E5/ffffff?text=J" },
     { name: "Taylor", avatar: "https://placehold.co/100x100/FFD8C9/ffffff?text=T" },
   ];
 
-  // Function to get the media stream with specific constraints
   const getStream = useCallback(async (micId) => {
     try {
       const newStream = await navigator.mediaDevices.getUserMedia({
@@ -67,7 +74,7 @@ function PreJoin() {
         userVideo.current.srcObject = newStream;
       }
 
-      // Disconnect and connect new audio nodes
+      // ... existing audio node logic ...
       if (audioContextRef.current) {
         if (sourceNodeRef.current) {
           sourceNodeRef.current.disconnect();
@@ -124,10 +131,9 @@ function PreJoin() {
     };
     getDevices();
 
-    // Simulate other users joining after a delay
     const timer = setTimeout(() => {
       setJoinedUsers(mockJoinedUsers);
-    }, 3000); // 3-second delay
+    }, 3000); 
 
     return () => {
       clearTimeout(timer);
@@ -139,6 +145,8 @@ function PreJoin() {
       }
     };
   }, [getStream, mockJoinedUsers]);
+
+  // ... existing toggleCamera, toggleMic, handleAudioInputChange, handleAudioOutputChange, handleVolumeChange, toggleNoiseSuppression ...
 
   const toggleCamera = () => {
     if (stream) {
@@ -197,11 +205,22 @@ function PreJoin() {
     getStream(selectedAudioInput);
   };
 
-  // New handler for language change
   const handleLanguageChange = (e) => {
     setSelectedLanguage(e.target.value);
-    // In a real application, you'd update the UI strings here
   };
+
+  // New handler for background change
+  const handleBackgroundEffectChange = (e) => {
+    setSelectedBackgroundEffect(e.target.value);
+    // In a real app, this would trigger the actual background processing logic (e.g., a WASM pipeline)
+  };
+
+  // Helper to get the Tailwind class for the selected background for the preview
+  const getSelectedBackgroundClass = () => {
+    const selected = BACKGROUND_OPTIONS.find(opt => opt.code === selectedBackgroundEffect);
+    return selected ? selected.color : 'bg-gray-700';
+  };
+
 
   const joinRoom = () => {
     if (!name) {
@@ -209,8 +228,19 @@ function PreJoin() {
       return;
     }
     setErrorMessage("");
-    // Pass selectedLanguage to the next page if needed
-    navigate(`/room/${roomId}`, { state: { name, cameraOn, micOn, selectedAudioInput, selectedAudioOutput, isNoiseSuppressionOn, selectedLanguage } });
+    // Pass selectedLanguage and selectedBackgroundEffect to the next page
+    navigate(`/room/${roomId}`, { 
+        state: { 
+            name, 
+            cameraOn, 
+            micOn, 
+            selectedAudioInput, 
+            selectedAudioOutput, 
+            isNoiseSuppressionOn, 
+            selectedLanguage, 
+            selectedBackgroundEffect // Pass the new state
+        } 
+    });
   };
 
   return (
@@ -230,7 +260,7 @@ function PreJoin() {
 
       {/* Main Content Area */}
       <div className="flex flex-col md:flex-row flex-1 p-8 justify-center items-center md:space-x-8 space-y-8 md:space-y-0">
-        {/* Left Sidebar - Language Dropdown added here */}
+        {/* Left Sidebar */}
         <div className="flex flex-col items-start p-4 bg-[#2E4242] rounded-xl shadow-lg w-full md:w-1/4 min-w-[200px] space-y-4">
           
           {/* Language Selection Dropdown */}
@@ -279,8 +309,27 @@ function PreJoin() {
             <input type="checkbox" className="mr-2" />
             Remember your name
           </label>
+          
+          {/* Background Selection Section */}
           <h3 className="text-xl font-semibold mt-4">Background</h3>
-          <div className="w-full h-20 border border-[#6D8A78] bg-[#1E1F21] rounded-lg" />
+          <label className="block text-sm font-medium">Select Effect:</label>
+          <select
+            value={selectedBackgroundEffect}
+            onChange={handleBackgroundEffectChange}
+            className="mt-1 block w-full rounded-md shadow-sm bg-gray-700 border-gray-600 focus:border-[#6D8A78] focus:ring focus:ring-[#6D8A78] focus:ring-opacity-50 text-white p-2"
+          >
+            {BACKGROUND_OPTIONS.map((option) => (
+              <option key={option.code} value={option.code}>
+                {option.name}
+              </option>
+            ))}
+          </select>
+          {/* Background Preview */}
+          <div className={`w-full h-20 border-2 border-[#6D8A78] rounded-lg relative overflow-hidden flex items-center justify-center ${getSelectedBackgroundClass()}`}>
+            <span className="text-xs font-bold text-white z-10 p-1 bg-black/50 rounded">{BACKGROUND_OPTIONS.find(opt => opt.code === selectedBackgroundEffect).name}</span>
+          </div>
+          {/* End of Background Selection Section */}
+
         </div>
 
         {/* Central Video Section */}
