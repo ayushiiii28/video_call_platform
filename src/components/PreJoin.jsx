@@ -21,12 +21,20 @@ const EUROPEAN_LANGUAGES = [
 
 // Define background options
 const BACKGROUND_OPTIONS = [
-  { code: 'none', name: 'None (Real Background)', color: 'bg-transparent' },
-  { code: 'blur-light', name: 'Light Blur', color: 'bg-blue-900/50 backdrop-blur-sm' },
-  { code: 'blur-heavy', name: 'Heavy Blur', color: 'bg-blue-900/80 backdrop-blur-md' },
-  { code: 'virtual-office', name: 'Virtual: Office', color: 'bg-[url("https://placehold.co/100x100/5E4028/ffffff?text=Office")] bg-cover' },
-  { code: 'virtual-beach', name: 'Virtual: Beach', color: 'bg-[url("https://placehold.co/100x100/7DAA9E/ffffff?text=Beach")] bg-cover' },
+  { code: 'none', name: 'None (Real Background)', color: 'bg-[#1E1F21]' }, // Changed color for 'none'
+  { code: 'blur-light', name: 'Light Blur', color: 'bg-[#1E1F21]' }, // Blurring is applied to the video element itself
+  { code: 'blur-heavy', name: 'Heavy Blur', color: 'bg-[#1E1F21]' },
+  { code: 'virtual-office', name: 'Virtual: Office', color: 'bg-[url("https://placehold.co/100x100/5E4028/ffffff?text=Office")] bg-cover bg-center' },
+  { code: 'virtual-beach', name: 'Virtual: Beach', color: 'bg-[url("https://placehold.co/100x100/7DAA9E/ffffff?text=Beach")] bg-cover bg-center' },
 ];
+
+// Helper to get the Tailwind class for the selected background
+// This will apply the virtual background image to the video container
+const getSelectedBackgroundClass = (selectedCode) => {
+  const selected = BACKGROUND_OPTIONS.find(opt => opt.code === selectedCode);
+  return selected ? selected.color : 'bg-[#1E1F21]';
+};
+
 
 function PreJoin() {
   const { roomId } = useParams();
@@ -42,7 +50,6 @@ function PreJoin() {
   const [isNoiseSuppressionOn, setIsNoiseSuppressionOn] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
   const [selectedLanguage, setSelectedLanguage] = useState(EUROPEAN_LANGUAGES[0].code); 
-  // New state for background effect, default to 'none'
   const [selectedBackgroundEffect, setSelectedBackgroundEffect] = useState(BACKGROUND_OPTIONS[0].code); 
   const userVideo = useRef();
   const navigate = useNavigate();
@@ -146,8 +153,6 @@ function PreJoin() {
     };
   }, [getStream, mockJoinedUsers]);
 
-  // ... existing toggleCamera, toggleMic, handleAudioInputChange, handleAudioOutputChange, handleVolumeChange, toggleNoiseSuppression ...
-
   const toggleCamera = () => {
     if (stream) {
       const videoTrack = stream.getVideoTracks()[0];
@@ -209,18 +214,9 @@ function PreJoin() {
     setSelectedLanguage(e.target.value);
   };
 
-  // New handler for background change
   const handleBackgroundEffectChange = (e) => {
     setSelectedBackgroundEffect(e.target.value);
-    // In a real app, this would trigger the actual background processing logic (e.g., a WASM pipeline)
   };
-
-  // Helper to get the Tailwind class for the selected background for the preview
-  const getSelectedBackgroundClass = () => {
-    const selected = BACKGROUND_OPTIONS.find(opt => opt.code === selectedBackgroundEffect);
-    return selected ? selected.color : 'bg-gray-700';
-  };
-
 
   const joinRoom = () => {
     if (!name) {
@@ -228,7 +224,6 @@ function PreJoin() {
       return;
     }
     setErrorMessage("");
-    // Pass selectedLanguage and selectedBackgroundEffect to the next page
     navigate(`/room/${roomId}`, { 
         state: { 
             name, 
@@ -238,7 +233,7 @@ function PreJoin() {
             selectedAudioOutput, 
             isNoiseSuppressionOn, 
             selectedLanguage, 
-            selectedBackgroundEffect // Pass the new state
+            selectedBackgroundEffect 
         } 
     });
   };
@@ -324,23 +319,33 @@ function PreJoin() {
               </option>
             ))}
           </select>
-          {/* Background Preview */}
-          <div className={`w-full h-20 border-2 border-[#6D8A78] rounded-lg relative overflow-hidden flex items-center justify-center ${getSelectedBackgroundClass()}`}>
-            <span className="text-xs font-bold text-white z-10 p-1 bg-black/50 rounded">{BACKGROUND_OPTIONS.find(opt => opt.code === selectedBackgroundEffect).name}</span>
-          </div>
           {/* End of Background Selection Section */}
 
         </div>
 
-        {/* Central Video Section */}
-        <div className="flex-1 flex flex-col items-center relative min-w-[400px] max-w-3xl rounded-xl overflow-hidden shadow-2xl">
-          <video ref={userVideo} autoPlay muted playsInline className="w-full h-full object-cover rounded-xl" />
+        {/* Central Video Section - UPDATED TO REFLECT BACKGROUND CHOICE */}
+        <div className="flex-1 relative min-w-[400px] max-w-3xl rounded-xl overflow-hidden shadow-2xl">
+          <div className={`w-full h-full flex items-center justify-center ${getSelectedBackgroundClass(selectedBackgroundEffect)}`}>
+            {/* The video element uses conditional classes for a visual blur effect placeholder */}
+            <video 
+              ref={userVideo} 
+              autoPlay 
+              muted 
+              playsInline 
+              // Apply blur filter if a blur option is selected
+              className={`w-full h-full object-cover rounded-xl ${
+                selectedBackgroundEffect.includes('blur') ? 'filter blur-sm' : ''
+              }`} 
+            />
+          </div>
+          
           {errorMessage && (
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 p-4 bg-red-600 bg-opacity-80 text-white rounded-lg shadow-lg">
               {errorMessage}
             </div>
           )}
         </div>
+        {/* END of Central Video Section */}
 
         {/* Right Sidebar */}
         <div className="flex flex-col items-start p-4 bg-[#2E4242] rounded-xl shadow-lg w-full md:w-1/4 min-w-[200px] space-y-4">
