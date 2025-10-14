@@ -66,9 +66,7 @@ function Room() {
             return;
         }
 
-        // 🐛 BUG FIX: This line resets participants. We only want it to run on initial load.
-        // It should be moved out or ensure the dependency array is strict.
-        // For mock data, it's simplest to keep it here and manage dependencies.
+        // Initialize participants only on mount
         setParticipants([{ id: 'me', name: name, stream: null, videoUrl: "https://placehold.co/600x400/3E76E8/ffffff?text=Me" }]);
 
         const getDevices = async () => {
@@ -138,10 +136,9 @@ function Room() {
             if (screenStream) screenStream.getTracks().forEach(track => track.stop()); 
             if (audioContextRef.current) audioContextRef.current.close();
         };
-    // 💡 BUG FIX: Removed 'stream' and 'screenStream' from dependencies.
-    // Changes to streams should not trigger participant reset logic.
+    // Dependencies only include states/props that should trigger a re-setup.
     }, [name, selectedMic, localVolume, noiseSuppression, navigate, roomId, camera, mic]); 
-    // The mic and camera states are intentionally kept to re-run getStream() when toggled.
+    
 
     const toggleChat = () => {
         setIsChatOpen(prev => !prev);
@@ -381,7 +378,8 @@ function Room() {
                     <FontAwesomeIcon icon={faShareAlt} />
                 </div>
                 <div className="p-2 bg-[#1E1F21] text-white font-bold">Meeting Title</div>
-                <div className="p-2 bg-[#1E1F21] text-white font-bold">Host Name</div>
+                {/* HOST NAME UPDATE */}
+                <div className="p-2 bg-[#1E1F21] text-white font-bold">Host: {name}</div> 
             </div>
 
             <div className="flex flex-1 overflow-hidden">
