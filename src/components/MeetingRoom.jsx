@@ -17,6 +17,9 @@ import {
     faDesktop 
 } from '@fortawesome/free-solid-svg-icons';
 
+// 1. CUSTOM IMAGE IMPORT: Assuming 'OneVoiceIcon.jpg' is in your src/assets folder
+import TranslationIconImage from './OneVoiceIcon.png'; // **ADJUST PATH IF NECESSARY**
+
 function Room() {
     const { roomId } = useParams();
     const location = useLocation();
@@ -420,9 +423,21 @@ function Room() {
                             <FontAwesomeIcon icon={faCommentDots} />
                         </button>
                         <Recording stream={stream} />
-                        <button onClick={toggleTranslationPanel} className={`text-2xl ${isTranslationPanelOpen ? 'text-white' : 'text-gray-400 hover:text-white'} transition-colors duration-200`} title="Translation & Transcription">
-                            <FontAwesomeIcon icon={faLanguage} />
+                        
+                        {/* 2. CUSTOM IMAGE BUTTON IMPLEMENTATION */}
+                        <button 
+                            onClick={toggleTranslationPanel} 
+                            // Set a fixed size (w-10 h-10) and manage background color for active state
+                            className={`w-10 h-10 p-1 flex items-center justify-center rounded-lg transition-colors duration-200 ${isTranslationPanelOpen ? 'bg-gray-600' : 'hover:bg-gray-700'}`} 
+                            title="Translation & Transcription"
+                        >
+                            <img 
+                                src={TranslationIconImage} 
+                                alt="OneVoice Translation Icon" 
+                                className="w-full h-full object-contain" 
+                            />
                         </button>
+                        
                         <button onClick={toggleParticipants} className="text-2xl text-gray-400 hover:text-white transition-colors duration-200" title="Participants">
                             <FontAwesomeIcon icon={faUserFriends} />
                         </button>

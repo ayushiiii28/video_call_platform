@@ -1,9 +1,20 @@
+/* App.css */
 #root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
+  /*
+  max-width: 1280px;  <-- REMOVE or COMMENT OUT
+  margin: 0 auto;     <-- REMOVE or COMMENT OUT
+  padding: 2rem;      <-- REMOVE or COMMENT OUT
   text-align: center;
+  */
+
+  /* Optional: Set a min-height for better mobile behavior if needed */
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+  text-align: initial;
 }
+
+/* ... rest of the styles are fine (logo, animation, card, etc.) ... */
 
 .logo {
   height: 6em;
