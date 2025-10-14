@@ -1,46 +1,64 @@
-import { useState } from "react";
-import { MonitorUp, MonitorX } from "lucide-react";
+// ScreenShare.jsx
+import React from 'react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faDesktop } from '@fortawesome/free-solid-svg-icons';
 
-export default function ScreenShare() {
-  const [isSharing, setIsSharing] = useState(false);
+/**
+ * Button component to handle screen sharing logic and state updates.
+ * @param {object} props
+ * @param {boolean} props.isSharing - The current screen sharing state.
+ * @param {function} props.setIsSharing - Function to update the screen sharing state in the parent.
+ * @param {function} props.setScreenStream - Function to set the MediaStream of the shared screen in the parent.
+ */
+export default function ScreenShare({ isSharing, setIsSharing, setScreenStream }) {
 
-  const handleScreenShare = async () => {
-    try {
-      if (!isSharing) {
-        // Start screen share
-        const stream = await navigator.mediaDevices.getDisplayMedia({
-          video: true,
-        });
-        console.log("Screen sharing started:", stream);
-        // TODO: attach this stream to your peer connection (WebRTC)
-        setIsSharing(true);
-      } else {
-        // Stop screen share
-        // If using WebRTC, you'd stop sending the track here
-        console.log("Screen sharing stopped");
-        setIsSharing(false);
-      }
-    } catch (err) {
-      console.error("Error sharing screen:", err);
-    }
-  };
+    const handleScreenShare = async () => {
+        try {
+            if (!isSharing) {
+                // Start screen share
+                const stream = await navigator.mediaDevices.getDisplayMedia({
+                    video: true,
+                    audio: true, // Typically share system audio as well
+                });
+                
+                setScreenStream(stream);
+                setIsSharing(true);
 
-  return (
-    <button
-      onClick={handleScreenShare}
-      className={`flex items-center gap-2 px-4 py-2 rounded-xl shadow-md transition ${
-        isSharing ? "bg-red-500 text-white" : "bg-blue-500 text-white"
-      }`}
-    >
-      {isSharing ? (
-        <>
-          <MonitorX size={18} /> Stop Share
-        </>
-      ) : (
-        <>
-          <MonitorUp size={18} /> Share Screen
-        </>
-      )}
-    </button>
-  );
+                // Listen for when the user stops sharing via the browser's UI (e.g., "Stop sharing" button)
+                const screenTrack = stream.getVideoTracks()[0];
+                screenTrack.onended = () => {
+                    setIsSharing(false);
+                    setScreenStream(null);
+                    console.log("Screen sharing stopped by browser UI.");
+                };
+
+                console.log("Screen sharing started:", stream);
+            } else {
+                // Stop screen share by stopping all tracks and clearing state
+                setScreenStream(prevStream => {
+                    if (prevStream) {
+                        prevStream.getTracks().forEach(track => track.stop());
+                    }
+                    return null;
+                });
+                setIsSharing(false);
+                console.log("Screen sharing stopped by button.");
+            }
+        } catch (err) {
+            // User denied permission or an error occurred
+            console.error("Error sharing screen:", err);
+            setIsSharing(false);
+            setScreenStream(null);
+        }
+    };
+
+    return (
+        <button 
+            onClick={handleScreenShare} 
+            className={`text-2xl ${isSharing ? 'text-green-400' : 'text-gray-400 hover:text-white'}`} 
+            title={isSharing ? "Stop Sharing" : "Share Screen"}
+        >
+            <FontAwesomeIcon icon={faDesktop} />
+        </button>
+    );
 }
