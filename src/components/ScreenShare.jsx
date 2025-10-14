@@ -5,10 +5,6 @@ import { faDesktop } from '@fortawesome/free-solid-svg-icons';
 
 /**
  * Button component to handle screen sharing logic and state updates.
- * @param {object} props
- * @param {boolean} props.isSharing - The current screen sharing state.
- * @param {function} props.setIsSharing - Function to update the screen sharing state in the parent.
- * @param {function} props.setScreenStream - Function to set the MediaStream of the shared screen in the parent.
  */
 export default function ScreenShare({ isSharing, setIsSharing, setScreenStream }) {
 
@@ -18,13 +14,13 @@ export default function ScreenShare({ isSharing, setIsSharing, setScreenStream }
                 // Start screen share
                 const stream = await navigator.mediaDevices.getDisplayMedia({
                     video: true,
-                    audio: true, // Typically share system audio as well
+                    audio: true, 
                 });
                 
                 setScreenStream(stream);
                 setIsSharing(true);
 
-                // Listen for when the user stops sharing via the browser's UI (e.g., "Stop sharing" button)
+                // Listen for when the user stops sharing via the browser's native UI button
                 const screenTrack = stream.getVideoTracks()[0];
                 screenTrack.onended = () => {
                     setIsSharing(false);

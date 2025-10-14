@@ -3,7 +3,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 // Ensure these imports are available in your project structure
 import ChatBox from "./ChatBox"; 
-import ScreenShare from "./ScreenShare"; // The button component from above
+import ScreenShare from "./ScreenShare"; // The button component
 import Recording from "./Recording";
 import TranslationPanel from "./TranslationPanel";
 
@@ -14,7 +14,7 @@ import {
     faMicrophone, faMicrophoneSlash,
     faCommentDots, faUserFriends, faCog, faShareAlt, faTimes,
     faSignOutAlt, faLanguage,
-    faDesktop // Already included but good practice
+    faDesktop 
 } from '@fortawesome/free-solid-svg-icons';
 
 function Room() {
@@ -29,7 +29,7 @@ function Room() {
     const [pendingParticipants, setPendingParticipants] = useState([]);
     const [isChatOpen, setIsChatOpen] = useState(false);
     
-    // NEW STATES for Screen Sharing
+    // STATES for Screen Sharing
     const [isScreenSharing, setIsScreenSharing] = useState(false);
     const [screenStream, setScreenStream] = useState(null); 
     
@@ -66,6 +66,9 @@ function Room() {
             return;
         }
 
+        // 🐛 BUG FIX: This line resets participants. We only want it to run on initial load.
+        // It should be moved out or ensure the dependency array is strict.
+        // For mock data, it's simplest to keep it here and manage dependencies.
         setParticipants([{ id: 'me', name: name, stream: null, videoUrl: "https://placehold.co/600x400/3E76E8/ffffff?text=Me" }]);
 
         const getDevices = async () => {
@@ -130,12 +133,15 @@ function Room() {
 
         return () => {
             clearTimeout(joinRequestTimer);
+            // Cleanup logic for streams
             if (stream) stream.getTracks().forEach(track => track.stop());
-            // Also stop screen stream if active when leaving the room
             if (screenStream) screenStream.getTracks().forEach(track => track.stop()); 
             if (audioContextRef.current) audioContextRef.current.close();
         };
-    }, [name, selectedMic, localVolume, noiseSuppression, navigate, roomId, camera, mic, stream, screenStream]);
+    // 💡 BUG FIX: Removed 'stream' and 'screenStream' from dependencies.
+    // Changes to streams should not trigger participant reset logic.
+    }, [name, selectedMic, localVolume, noiseSuppression, navigate, roomId, camera, mic]); 
+    // The mic and camera states are intentionally kept to re-run getStream() when toggled.
 
     const toggleChat = () => {
         setIsChatOpen(prev => !prev);
@@ -277,7 +283,6 @@ function Room() {
             }
         }, [screenStream]);
 
-        // Fallback or loading state
         if (!screenStream) {
              return (
                  <div className="w-full h-full flex items-center justify-center bg-gray-800 rounded-xl">
@@ -291,7 +296,7 @@ function Room() {
                 ref={videoRef}
                 autoPlay
                 playsInline
-                muted // Muting to prevent echo if system audio is captured (WebRTC handles this better)
+                muted 
                 className="w-full h-full object-contain bg-black rounded-xl shadow-2xl"
             />
         );
@@ -301,10 +306,8 @@ function Room() {
     const ParticipantTile = ({ user, isMinimized = false }) => (
         <div key={user.id} className={`relative bg-[#1E1F21] rounded-xl overflow-hidden shadow-2xl ${isMinimized ? 'w-full h-full' : 'w-full h-full'}`}>
             {user.id === 'me' ? (
-                // Local video feed
                 <video ref={userVideo} autoPlay muted playsInline className="w-full h-full object-cover" />
             ) : (
-                // Remote/Mock video feed
                 <img src={user.videoUrl} alt={user.name} className="w-full h-full object-cover" />
             )}
             {user.id === 'me' && !camera && (
@@ -448,7 +451,7 @@ function Room() {
 
                 {isParticipantsOpen && (
                     <div className="absolute top-0 right-0 h-full w-80 z-50 bg-[#1E1F21] p-4 overflow-y-auto shadow-xl transition-transform duration-300">
-                        <h2 className="text-white font-bold mb-4">Participants</h2>
+                        <h2 className="text-2xl font-bold mb-4">Participants</h2>
                         {participants.map(p => (
                             <div key={p.id} className="flex items-center space-x-2 mb-2">
                                 <div className="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center text-white">
