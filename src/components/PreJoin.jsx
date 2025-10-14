@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 // Load Tailwind CSS from CDN for convenience.
@@ -6,38 +6,46 @@ const tailwindScript = document.createElement("script");
 tailwindScript.src = "https://cdn.tailwindcss.com";
 document.head.appendChild(tailwindScript);
 
-// Define the list of European languages for the dropdown
 const EUROPEAN_LANGUAGES = [
-  { code: 'en', name: 'English' },
-  { code: 'fr', name: 'French' },
-  { code: 'es', name: 'Spanish' },
-  { code: 'de', name: 'German' },
-  { code: 'it', name: 'Italian' },
-  { code: 'pt', name: 'Portuguese' },
-  { code: 'nl', name: 'Dutch' },
-  { code: 'ru', name: 'Russian' },
-  { code: 'pl', name: 'Polish' },
+  { code: "en", name: "English" },
+  { code: "fr", name: "French" },
+  { code: "es", name: "Spanish" },
+  { code: "de", name: "German" },
+  { code: "it", name: "Italian" },
+  { code: "pt", name: "Portuguese" },
+  { code: "nl", name: "Dutch" },
+  { code: "ru", name: "Russian" },
+  { code: "pl", name: "Polish" },
 ];
 
-// Define background options
 const BACKGROUND_OPTIONS = [
-  { code: 'none', name: 'None (Real Background)', color: 'bg-[#1E1F21]' }, // Changed color for 'none'
-  { code: 'blur-light', name: 'Light Blur', color: 'bg-[#1E1F21]' }, // Blurring is applied to the video element itself
-  { code: 'blur-heavy', name: 'Heavy Blur', color: 'bg-[#1E1F21]' },
-  { code: 'virtual-office', name: 'Virtual: Office', color: 'bg-[url("https://placehold.co/100x100/5E4028/ffffff?text=Office")] bg-cover bg-center' },
-  { code: 'virtual-beach', name: 'Virtual: Beach', color: 'bg-[url("https://placehold.co/100x100/7DAA9E/ffffff?text=Beach")] bg-cover bg-center' },
+  { code: "none", name: "None (Real Background)", color: "bg-[#1E1F21]" },
+  { code: "blur-light", name: "Light Blur", color: "bg-[#1E1F21]" },
+  { code: "blur-heavy", name: "Heavy Blur", color: "bg-[#1E1F21]" },
+  {
+    code: "virtual-office",
+    name: "Virtual: Office",
+    color:
+      'bg-[url("https://placehold.co/100x100/5E4028/ffffff?text=Office")] bg-cover bg-center',
+  },
+  {
+    code: "virtual-beach",
+    name: "Virtual: Beach",
+    color:
+      'bg-[url("https://placehold.co/100x100/7DAA9E/ffffff?text=Beach")] bg-cover bg-center',
+  },
 ];
 
-// Helper to get the Tailwind class for the selected background
-// This will apply the virtual background image to the video container
 const getSelectedBackgroundClass = (selectedCode) => {
-  const selected = BACKGROUND_OPTIONS.find(opt => opt.code === selectedCode);
-  return selected ? selected.color : 'bg-[#1E1F21]';
+  const selected = BACKGROUND_OPTIONS.find((opt) => opt.code === selectedCode);
+  return selected ? selected.color : "bg-[#1E1F21]";
 };
-
 
 function PreJoin() {
   const { roomId } = useParams();
+  const navigate = useNavigate();
+  const userVideo = useRef(null);
+
   const [name, setName] = useState("");
   const [stream, setStream] = useState(null);
   const [cameraOn, setCameraOn] = useState(true);
@@ -48,121 +56,75 @@ function PreJoin() {
   const [selectedAudioInput, setSelectedAudioInput] = useState("");
   const [selectedAudioOutput, setSelectedAudioOutput] = useState("");
   const [isNoiseSuppressionOn, setIsNoiseSuppressionOn] = useState(true);
+  const [selectedLanguage, setSelectedLanguage] = useState(
+    EUROPEAN_LANGUAGES[0].code
+  );
+  const [selectedBackgroundEffect, setSelectedBackgroundEffect] = useState(
+    BACKGROUND_OPTIONS[0].code
+  );
   const [errorMessage, setErrorMessage] = useState("");
-  const [selectedLanguage, setSelectedLanguage] = useState(EUROPEAN_LANGUAGES[0].code); 
-  const [selectedBackgroundEffect, setSelectedBackgroundEffect] = useState(BACKGROUND_OPTIONS[0].code); 
-  const userVideo = useRef();
-  const navigate = useNavigate();
-  const audioContextRef = useRef(null);
-  const sourceNodeRef = useRef(null);
-  const gainNodeRef = useRef(null);
+  // 💡 Change: joinedUsers is initialized to an empty array and no mock data is used.
+  const [joinedUsers, setJoinedUsers] = useState([]); 
 
-  const [joinedUsers, setJoinedUsers] = useState([]);
-
-  const mockJoinedUsers = [
-    { name: "Alex", avatar: "https://placehold.co/100x100/A0E7E5/ffffff?text=A" },
-    { name: "Jordan", avatar: "https://placehold.co/100x100/C4A7E5/ffffff?text=J" },
-    { name: "Taylor", avatar: "https://placehold.co/100x100/FFD8C9/ffffff?text=T" },
-  ];
-
-  const getStream = useCallback(async (micId) => {
-    try {
-      const newStream = await navigator.mediaDevices.getUserMedia({
-        video: true,
-        audio: {
-          deviceId: micId ? { exact: micId } : undefined,
-          noiseSuppression: isNoiseSuppressionOn,
-          echoCancellation: true,
-        },
-      });
-
-      setStream(newStream);
-      if (userVideo.current) {
-        userVideo.current.srcObject = newStream;
-      }
-
-      // ... existing audio node logic ...
-      if (audioContextRef.current) {
-        if (sourceNodeRef.current) {
-          sourceNodeRef.current.disconnect();
-        }
-        if (gainNodeRef.current) {
-          gainNodeRef.current.disconnect();
-        }
-      }
-
-      audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
-      sourceNodeRef.current = audioContextRef.current.createMediaStreamSource(newStream);
-      gainNodeRef.current = audioContextRef.current.createGain();
-
-      sourceNodeRef.current.connect(gainNodeRef.current);
-      gainNodeRef.current.connect(audioContextRef.current.destination);
-      gainNodeRef.current.gain.value = localVolume;
-
-      const audioTrack = newStream.getAudioTracks()[0];
-      if (audioTrack) {
-        audioTrack.enabled = micOn;
-      }
-      const videoTrack = newStream.getVideoTracks()[0];
-      if (videoTrack) {
-        videoTrack.enabled = cameraOn;
-      }
-    } catch (error) {
-      console.error("Error accessing media devices.", error);
-      setErrorMessage("Please allow camera and microphone access to join the room.");
-    }
-  }, [cameraOn, micOn, localVolume, isNoiseSuppressionOn]);
-
+  // ✅ Setup media stream ONCE on mount
   useEffect(() => {
-    const getDevices = async () => {
+    let currentStream;
+
+    const setupMedia = async () => {
       try {
         const devices = await navigator.mediaDevices.enumerateDevices();
-        const audioInputDevices = devices.filter((device) => device.kind === "audioinput");
-        const audioOutputDevices = devices.filter((device) => device.kind === "audiooutput");
+        const audioInputDevices = devices.filter(
+          (d) => d.kind === "audioinput"
+        );
+        const audioOutputDevices = devices.filter(
+          (d) => d.kind === "audiooutput"
+        );
 
         setAudioInputs(audioInputDevices);
         setAudioOutputs(audioOutputDevices);
 
-        if (audioInputDevices.length > 0) {
-          setSelectedAudioInput(audioInputDevices[0].deviceId);
-          getStream(audioInputDevices[0].deviceId);
-        } else {
-          getStream(null);
-        }
+        const initialMicId = audioInputDevices[0]?.deviceId || null;
+        setSelectedAudioInput(initialMicId || "");
+
         if (audioOutputDevices.length > 0) {
           setSelectedAudioOutput(audioOutputDevices[0].deviceId);
         }
+
+        // 🎥 Get camera + mic stream ONCE
+        currentStream = await navigator.mediaDevices.getUserMedia({
+          video: true,
+          audio: {
+            deviceId: initialMicId ? { exact: initialMicId } : undefined,
+            noiseSuppression: isNoiseSuppressionOn,
+            echoCancellation: true,
+          },
+        });
+
+        setStream(currentStream);
+        if (userVideo.current) {
+          userVideo.current.srcObject = currentStream;
+        }
       } catch (error) {
-        console.error("Error enumerating devices:", error);
+        console.error("Error accessing media devices:", error);
+        setErrorMessage(
+          "Please allow camera and microphone access to join the room."
+        );
       }
     };
-    getDevices();
 
-    const timer = setTimeout(() => {
-      setJoinedUsers(mockJoinedUsers);
-    }, 3000); 
+    setupMedia();
 
+    // Cleanup on unmount
     return () => {
-      clearTimeout(timer);
-      if (stream) {
-        stream.getTracks().forEach(track => track.stop());
-      }
-      if (audioContextRef.current) {
-        audioContextRef.current.close();
+      if (currentStream) {
+        currentStream.getTracks().forEach((t) => t.stop());
       }
     };
-  }, [getStream, mockJoinedUsers]);
+  }, [isNoiseSuppressionOn]); // Kept isNoiseSuppressionOn for stream recreation when toggled
 
-  const toggleCamera = () => {
-    if (stream) {
-      const videoTrack = stream.getVideoTracks()[0];
-      if (videoTrack) {
-        videoTrack.enabled = !videoTrack.enabled;
-        setCameraOn(videoTrack.enabled);
-      }
-    }
-  };
+  // 💡 Change: Removed the useEffect that set mockJoinedUsers
 
+  // 🎤 Toggle mic
   const toggleMic = () => {
     if (stream) {
       const audioTrack = stream.getAudioTracks()[0];
@@ -173,49 +135,76 @@ function PreJoin() {
     }
   };
 
-  const handleAudioInputChange = (e) => {
+  // 📸 Toggle camera
+  const toggleCamera = () => {
+    if (stream) {
+      const videoTrack = stream.getVideoTracks()[0];
+      if (videoTrack) {
+        videoTrack.enabled = !videoTrack.enabled;
+        setCameraOn(videoTrack.enabled);
+      }
+    }
+  };
+
+  // 🔊 Handle mic change without recreating entire stream
+  const handleAudioInputChange = async (e) => {
     const deviceId = e.target.value;
     setSelectedAudioInput(deviceId);
-    if (stream) {
-      stream.getTracks().forEach((track) => track.stop());
+
+    if (!stream) return;
+
+    try {
+      // Get a new stream just for the audio track
+      const newAudio = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          deviceId: { exact: deviceId },
+          noiseSuppression: isNoiseSuppressionOn,
+          echoCancellation: true,
+        },
+      });
+
+      const oldTrack = stream.getAudioTracks()[0];
+      const newTrack = newAudio.getAudioTracks()[0];
+
+      if (oldTrack) {
+        stream.removeTrack(oldTrack);
+        oldTrack.stop();
+      }
+
+      if (newTrack) {
+        stream.addTrack(newTrack);
+        // Ensure new track inherits current micOn state
+        newTrack.enabled = micOn; 
+      }
+    } catch (err) {
+      console.error("Error switching microphone:", err);
     }
-    getStream(deviceId);
   };
 
   const handleAudioOutputChange = async (e) => {
     const deviceId = e.target.value;
     setSelectedAudioOutput(deviceId);
-    if (userVideo.current && typeof userVideo.current.setSinkId === 'function') {
+    if (userVideo.current && typeof userVideo.current.setSinkId === "function") {
       try {
         await userVideo.current.setSinkId(deviceId);
       } catch (error) {
-        console.error("Could not set audio output device: ", error);
+        console.error("Could not set audio output device:", error);
       }
     }
   };
 
   const handleVolumeChange = (e) => {
-    const newVolume = parseFloat(e.target.value);
-    setLocalVolume(newVolume);
-    if (gainNodeRef.current) {
-      gainNodeRef.current.gain.value = newVolume;
-    }
-  };
-  
-  const toggleNoiseSuppression = () => {
-    setIsNoiseSuppressionOn(prev => !prev);
-    if (stream) {
-      stream.getTracks().forEach(track => track.stop());
-    }
-    getStream(selectedAudioInput);
+    setLocalVolume(parseFloat(e.target.value));
   };
 
-  const handleLanguageChange = (e) => {
-    setSelectedLanguage(e.target.value);
-  };
+  const toggleNoiseSuppression = async () => {
+    // Optimistically toggle state
+    setIsNoiseSuppressionOn((prev) => !prev);
 
-  const handleBackgroundEffectChange = (e) => {
-    setSelectedBackgroundEffect(e.target.value);
+    // Stream must be recreated to apply noise suppression setting
+    // The dependency array in the main useEffect handles stream recreation when isNoiseSuppressionOn changes.
+    // For immediate effect without waiting for the next render cycle, you might need a more complex solution
+    // but relying on the useEffect dependency is generally the React way.
   };
 
   const joinRoom = () => {
@@ -224,17 +213,17 @@ function PreJoin() {
       return;
     }
     setErrorMessage("");
-    navigate(`/room/${roomId}`, { 
-        state: { 
-            name, 
-            cameraOn, 
-            micOn, 
-            selectedAudioInput, 
-            selectedAudioOutput, 
-            isNoiseSuppressionOn, 
-            selectedLanguage, 
-            selectedBackgroundEffect 
-        } 
+    navigate(`/room/${roomId}`, {
+      state: {
+        name,
+        cameraOn,
+        micOn,
+        selectedAudioInput,
+        selectedAudioOutput,
+        isNoiseSuppressionOn,
+        selectedLanguage,
+        selectedBackgroundEffect,
+      },
     });
   };
 
@@ -242,28 +231,20 @@ function PreJoin() {
     <div className="flex flex-col h-screen w-screen bg-[#1D2C2A] text-[#E8E7E5] font-sans">
       {/* Top Bar */}
       <div className="flex justify-between items-center p-4 bg-[#1E1F21]">
-        <div className="p-2 bg-[#1E1F21] text-white font-bold">
-          Meeting Code: {roomId}
-        </div>
-        <div className="p-2 bg-[#1E1F21] text-white font-bold">
-          Meeting Title
-        </div>
-        <div className="p-2 bg-[#1E1F21] text-white font-bold">
-          Host Name
-        </div>
+        <div className="font-bold">Meeting Code: {roomId}</div>
+        <div className="font-bold">Meeting Title</div>
+        <div className="font-bold">Host Name</div>
       </div>
 
-      {/* Main Content Area */}
+      {/* Main Content */}
       <div className="flex flex-col md:flex-row flex-1 p-8 justify-center items-center md:space-x-8 space-y-8 md:space-y-0">
         {/* Left Sidebar */}
         <div className="flex flex-col items-start p-4 bg-[#2E4242] rounded-xl shadow-lg w-full md:w-1/4 min-w-[200px] space-y-4">
-          
-          {/* Language Selection Dropdown */}
           <label className="block text-sm font-medium">Select your language</label>
           <select
             value={selectedLanguage}
-            onChange={handleLanguageChange}
-            className="mt-1 block w-full rounded-md shadow-sm bg-gray-700 border-gray-600 focus:border-[#6D8A78] focus:ring focus:ring-[#6D8A78] focus:ring-opacity-50 text-white p-2"
+            onChange={(e) => setSelectedLanguage(e.target.value)}
+            className="mt-1 block w-full rounded-md bg-gray-700 border-gray-600 text-white p-2"
           >
             {EUROPEAN_LANGUAGES.map((lang) => (
               <option key={lang.code} value={lang.code}>
@@ -271,27 +252,15 @@ function PreJoin() {
               </option>
             ))}
           </select>
-          {/* End of Language Selection Dropdown */}
 
           <h3 className="text-xl font-semibold">Already in meet:</h3>
           <div className="w-full flex flex-col items-center justify-center p-4 bg-[#1E1F21] rounded-lg mb-4">
-            {joinedUsers.length > 0 ? (
-              <>
-                <div className="flex justify-center -space-x-4 mb-2">
-                  {joinedUsers.slice(0, 3).map((user, index) => (
-                    <div key={index} className="w-12 h-12 rounded-full border-2 border-[#1E1F21] overflow-hidden">
-                      <img src={user.avatar} alt={`${user.name}'s avatar`} className="object-cover w-full h-full" />
-                    </div>
-                  ))}
-                </div>
-                <div className="text-center text-sm">
-                  {joinedUsers.map(user => user.name).join(', ')} and more
-                </div>
-              </>
-            ) : (
-              <div className="text-center text-sm">You'll be the first to join!</div>
-            )}
+            {/* 💡 Change: Always show the default message since joinedUsers is empty */}
+            <div className="text-center text-sm">
+              You'll be the first to join!
+            </div>
           </div>
+
           <label className="text-white font-medium">Enter Name</label>
           <input
             type="text"
@@ -300,75 +269,67 @@ function PreJoin() {
             onChange={(e) => setName(e.target.value)}
             className="w-full p-2 rounded-lg border border-[#6D8A78] bg-[#1E1F21] text-white mb-4"
           />
-          <label className="flex items-center text-white">
-            <input type="checkbox" className="mr-2" />
-            Remember your name
-          </label>
-          
-          {/* Background Selection Section */}
+
           <h3 className="text-xl font-semibold mt-4">Background</h3>
-          <label className="block text-sm font-medium">Select Effect:</label>
           <select
             value={selectedBackgroundEffect}
-            onChange={handleBackgroundEffectChange}
-            className="mt-1 block w-full rounded-md shadow-sm bg-gray-700 border-gray-600 focus:border-[#6D8A78] focus:ring focus:ring-[#6D8A78] focus:ring-opacity-50 text-white p-2"
+            onChange={(e) => setSelectedBackgroundEffect(e.target.value)}
+            className="block w-full rounded-md bg-gray-700 border-gray-600 text-white p-2"
           >
-            {BACKGROUND_OPTIONS.map((option) => (
-              <option key={option.code} value={option.code}>
-                {option.name}
+            {BACKGROUND_OPTIONS.map((opt) => (
+              <option key={opt.code} value={opt.code}>
+                {opt.name}
               </option>
             ))}
           </select>
-          {/* End of Background Selection Section */}
-
         </div>
 
-        {/* Central Video Section - UPDATED TO REFLECT BACKGROUND CHOICE */}
+        {/* Center Video */}
         <div className="flex-1 relative min-w-[400px] max-w-3xl rounded-xl overflow-hidden shadow-2xl">
-          <div className={`w-full h-full flex items-center justify-center ${getSelectedBackgroundClass(selectedBackgroundEffect)}`}>
-            {/* The video element uses conditional classes for a visual blur effect placeholder */}
-            <video 
-              ref={userVideo} 
-              autoPlay 
-              muted 
-              playsInline 
-              // Apply blur filter if a blur option is selected
+          <div
+            className={`w-full h-full flex items-center justify-center ${getSelectedBackgroundClass(
+              selectedBackgroundEffect
+            )}`}
+          >
+            <video
+              ref={userVideo}
+              autoPlay
+              muted
+              playsInline
               className={`w-full h-full object-cover rounded-xl ${
-                selectedBackgroundEffect.includes('blur') ? 'filter blur-sm' : ''
-              }`} 
+                selectedBackgroundEffect.includes("blur")
+                  ? "filter blur-sm"
+                  : ""
+              }`}
             />
           </div>
-          
           {errorMessage && (
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 p-4 bg-red-600 bg-opacity-80 text-white rounded-lg shadow-lg">
               {errorMessage}
             </div>
           )}
         </div>
-        {/* END of Central Video Section */}
 
         {/* Right Sidebar */}
         <div className="flex flex-col items-start p-4 bg-[#2E4242] rounded-xl shadow-lg w-full md:w-1/4 min-w-[200px] space-y-4">
-          {/* Audio Input Selection */}
           <label className="block text-sm font-medium">Select Microphone:</label>
           <select
             value={selectedAudioInput}
             onChange={handleAudioInputChange}
-            className="mt-1 block w-full rounded-md shadow-sm bg-gray-700 border-gray-600 focus:border-[#6D8A78] focus:ring focus:ring-[#6D8A78] focus:ring-opacity-50 text-white"
+            className="block w-full rounded-md bg-gray-700 border-gray-600 text-white"
           >
             {audioInputs.map((device) => (
               <option key={device.deviceId} value={device.deviceId}>
-                {device.label || `Microphone ${device.deviceId.substring(0, 4)}`}
+                {device.label || `Mic ${device.deviceId.substring(0, 4)}`}
               </option>
             ))}
           </select>
 
-          {/* Audio Output Selection */}
           <label className="block text-sm font-medium">Select Speaker:</label>
           <select
             value={selectedAudioOutput}
             onChange={handleAudioOutputChange}
-            className="mt-1 block w-full rounded-md shadow-sm bg-gray-700 border-gray-600 focus:border-[#6D8A78] focus:ring focus:ring-[#6D8A78] focus:ring-opacity-50 text-white"
+            className="block w-full rounded-md bg-gray-700 border-gray-600 text-white"
           >
             {audioOutputs.map((device) => (
               <option key={device.deviceId} value={device.deviceId}>
@@ -377,55 +338,53 @@ function PreJoin() {
             ))}
           </select>
 
-          {/* Volume Control */}
-          <div>
-            <label className="block text-sm font-medium">Microphone Volume: {Math.round(localVolume * 100)}%</label>
-            <input
-              type="range"
-              min="0"
-              max="1"
-              step="0.01"
-              value={localVolume}
-              onChange={handleVolumeChange}
-              className="w-full h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer mt-2"
-            />
-          </div>
-          
-          {/* Noise Suppression Toggle */}
+          <label className="block text-sm font-medium">
+            Microphone Volume: {Math.round(localVolume * 100)}%
+          </label>
+          <input
+            type="range"
+            min="0"
+            max="1"
+            step="0.01"
+            value={localVolume}
+            onChange={handleVolumeChange}
+            className="w-full h-2 bg-gray-600 rounded-lg cursor-pointer"
+          />
+
           <div className="flex items-center space-x-2">
-            <label htmlFor="noise-suppression" className="text-sm font-medium">Noise Suppression</label>
+            <label className="text-sm font-medium">Noise Suppression</label>
             <button
               onClick={toggleNoiseSuppression}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${isNoiseSuppressionOn ? 'bg-green-600' : 'bg-gray-400'}`}
-              role="switch"
-              aria-checked={isNoiseSuppressionOn}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                isNoiseSuppressionOn ? "bg-green-600" : "bg-gray-400"
+              }`}
             >
               <span
-                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${isNoiseSuppressionOn ? 'translate-x-6' : 'translate-x-1'}`}
+                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  isNoiseSuppressionOn ? "translate-x-6" : "translate-x-1"
+                }`}
               />
             </button>
           </div>
 
-          {/* Camera Toggle */}
           <label className="block text-sm font-medium">Camera</label>
           <button
             onClick={toggleCamera}
-            className={`w-1/2 p-2 rounded-lg transition-colors duration-200 ${
-              cameraOn ? 'bg-green-600 text-white' : 'bg-gray-400 text-gray-800'
+            className={`w-1/2 p-2 rounded-lg ${
+              cameraOn ? "bg-green-600 text-white" : "bg-gray-400 text-gray-800"
             }`}
           >
-            {cameraOn ? 'Camera On' : 'Camera Off'}
+            {cameraOn ? "Camera On" : "Camera Off"}
           </button>
-          
-          {/* Microphone Toggle */}
+
           <label className="block text-sm font-medium">Microphone</label>
           <button
             onClick={toggleMic}
-            className={`w-1/2 p-2 rounded-lg transition-colors duration-200 ${
-              micOn ? 'bg-green-600 text-white' : 'bg-gray-400 text-gray-800'
+            className={`w-1/2 p-2 rounded-lg ${
+              micOn ? "bg-green-600 text-white" : "bg-gray-400 text-gray-800"
             }`}
           >
-            {micOn ? 'Mic On' : 'Mic Off'}
+            {micOn ? "Mic On" : "Mic Off"}
           </button>
         </div>
       </div>
@@ -436,14 +395,11 @@ function PreJoin() {
         <div className="flex space-x-4">
           <button
             onClick={joinRoom}
-            className="p-3 bg-[#6D8A78] text-white font-bold rounded-lg transition-colors duration-200 hover:bg-[#5a7164]"
+            className="p-3 bg-[#6D8A78] text-white font-bold rounded-lg hover:bg-[#5a7164]"
           >
             Join Now
           </button>
-          <button
-            onClick={() => { /* Leave functionality */ }}
-            className="p-3 bg-transparent text-[#6D8A78] font-bold rounded-lg border border-[#6D8A78] transition-colors duration-200 hover:bg-[#6D8A78] hover:text-white"
-          >
+          <button className="p-3 bg-transparent text-[#6D8A78] font-bold rounded-lg border border-[#6D8A78] hover:bg-[#6D8A78] hover:text-white">
             Leave
           </button>
         </div>
