@@ -3,6 +3,7 @@ import { useLocation, useNavigate, useParams } from "react-router-dom";
 import ChatBox from "./ChatBox";
 import ScreenShare from "./ScreenShare";
 import Recording from "./Recording";
+import TranslationPanel from "./TranslationPanel";
 
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
@@ -30,8 +31,9 @@ function Room() {
   const [isHandRaised, setIsHandRaised] = useState(false);
   const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
   const [reactionNotification, setReactionNotification] = useState(null);
-  // ✅ NEW: State for the Hand Raised Notification
   const [handRaiseNotification, setHandRaiseNotification] = useState(null);
+  // ✅ NEW: State for Translation Panel
+  const [isTranslationPanelOpen, setIsTranslationPanelOpen] = useState(false);
 
   const [camera, setCamera] = useState(cameraOn ?? true);
   const [mic, setMic] = useState(micOn ?? true);
@@ -127,11 +129,28 @@ function Room() {
     };
   }, [name, selectedMic, localVolume, noiseSuppression, navigate, roomId]);
 
-  const toggleChat = () => setIsChatOpen(prev => !prev);
+  const toggleChat = () => {
+    setIsChatOpen(prev => !prev);
+    // Ensure only one right panel is open at a time
+    if (isTranslationPanelOpen) setIsTranslationPanelOpen(false);
+    if (isParticipantsOpen) setIsParticipantsOpen(false);
+  };
   const toggleScreenShare = () => setIsScreenSharing(prev => !prev);
   const toggleSettings = () => setIsSettingsOpen(prev => !prev);
-  const toggleParticipants = () => setIsParticipantsOpen(prev => !prev);
+  const toggleParticipants = () => {
+    setIsParticipantsOpen(prev => !prev);
+    // Ensure only one right panel is open at a time
+    if (isChatOpen) setIsChatOpen(false);
+    if (isTranslationPanelOpen) setIsTranslationPanelOpen(false);
+  };
   const toggleEmojiPicker = () => setIsEmojiPickerOpen(prev => !prev);
+  // ✅ NEW: Toggle function for Translation Panel
+  const toggleTranslationPanel = () => {
+    setIsTranslationPanelOpen(prev => !prev);
+    // Ensure only one right panel is open at a time
+    if (isChatOpen) setIsChatOpen(false);
+    if (isParticipantsOpen) setIsParticipantsOpen(false);
+  };
 
   const sendReaction = (reaction) => {
     console.log(`Sending reaction: ${reaction}`);
@@ -140,7 +159,6 @@ function Room() {
     setTimeout(() => setReactionNotification(null), 3000);
   };
 
-  // ✅ UPDATED: Added logic to set/clear the notification
   const toggleHandRaise = () => {
     setIsHandRaised(prev => {
       const newState = !prev;
@@ -256,7 +274,6 @@ function Room() {
           </div>
       )}
     
-      {/* ✅ NEW: Hand Raised Notification */}
       {handRaiseNotification && (
           <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 bg-yellow-500 text-black p-3 rounded-lg shadow-xl font-bold animate-pulse">
               {handRaiseNotification}
@@ -280,7 +297,6 @@ function Room() {
             <button onClick={toggleEmojiPicker} className={`text-2xl ${isEmojiPickerOpen ? 'text-white' : 'text-gray-400 hover:text-white'}`} title="Send Reaction">
               <FontAwesomeIcon icon={faSmileWink} />
             </button>
-            {/* The hand raise button is correctly using the state to change color */}
             <button onClick={toggleHandRaise} className={`text-2xl ${isHandRaised ? 'text-yellow-400' : 'text-gray-400 hover:text-white'}`} title={isHandRaised ? "Lower Hand" : "Raise Hand"}>
               <FontAwesomeIcon icon={faHandPaper} />
             </button>
@@ -308,8 +324,8 @@ function Room() {
               <FontAwesomeIcon icon={faCommentDots} />
             </button>
             <Recording stream={stream} />
-            {/* ✅ Added Translation Icon */}
-            <button className="text-2xl text-gray-400 hover:text-white transition-colors duration-200" title="Translation">
+            {/* ✅ UPDATED: Call toggleTranslationPanel */}
+            <button onClick={toggleTranslationPanel} className={`text-2xl ${isTranslationPanelOpen ? 'text-white' : 'text-gray-400 hover:text-white'} transition-colors duration-200`} title="Translation & Transcription">
               <FontAwesomeIcon icon={faLanguage} />
             </button>
             <button onClick={toggleParticipants} className="text-2xl text-gray-400 hover:text-white transition-colors duration-200" title="Participants">
@@ -326,7 +342,10 @@ function Room() {
 
         {isEmojiPickerOpen && <EmojiPicker />}
 
-        <div className={`flex-1 transition-all duration-300 ${isChatOpen || isParticipantsOpen ? 'mr-80' : 'mr-0'} p-2 h-full w-full gap-2 ${containerClass}`}>
+        {/* Adjust the main content area's margin based on which right panel is open */}
+        <div className={`flex-1 transition-all duration-300 ${
+          isChatOpen || isParticipantsOpen || isTranslationPanelOpen ? 'mr-80' : 'mr-0'
+        } p-2 h-full w-full gap-2 ${containerClass}`}>
           {participants.map(user => (
             <div key={user.id} className={itemClass}>
               {user.id === 'me' ? (
@@ -359,11 +378,14 @@ function Room() {
             ))}
           </div>
         )}
+
+        {/* ✅ NEW: Render TranslationPanel when open */}
+        {isTranslationPanelOpen && <TranslationPanel onClose={() => setIsTranslationPanelOpen(false)} />}
       </div>
 
       {isScreenSharing && <ScreenShare stream={stream} />}
 
-      {/* SETTINGS MODAL (from previous fix) */}
+      {/* SETTINGS MODAL */}
       {isSettingsOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center z-50">
           <div className="bg-[#2E4242] p-8 rounded-xl shadow-2xl text-white max-w-lg w-full">
@@ -434,8 +456,6 @@ function Room() {
           </div>
         </div>
       )}
-      {/* END SETTINGS MODAL */}
-
 
       {pendingParticipants.length > 0 && (
         <div className="fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center z-50">
