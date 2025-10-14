@@ -20,6 +20,8 @@ function Room() {
   const navigate = useNavigate();
   const { name, cameraOn, micOn, selectedAudioInput, selectedAudioOutput, isNoiseSuppressionOn } = location.state || {};
 
+  // 🔑 NEW: Separate state for the screen share stream
+  const [screenStream, setScreenStream] = useState(null); 
   const [stream, setStream] = useState(null);
   const userVideo = useRef();
   const [participants, setParticipants] = useState([]);
@@ -32,7 +34,6 @@ function Room() {
   const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
   const [reactionNotification, setReactionNotification] = useState(null);
   const [handRaiseNotification, setHandRaiseNotification] = useState(null);
-  // ✅ NEW: State for Translation Panel
   const [isTranslationPanelOpen, setIsTranslationPanelOpen] = useState(false);
 
   const [camera, setCamera] = useState(cameraOn ?? true);
@@ -53,6 +54,46 @@ function Room() {
     { id: 102, name: "Michael", videoUrl: "https://placehold.co/600x400/81B4AE/ffffff?text=Michael" },
     { id: 103, name: "Charlie", videoUrl: "https://placehold.co/600x400/FFD700/000000?text=Charlie" },
   ];
+
+    // Helper function to get the local media stream (camera/mic)
+    const getStream = async (micId) => {
+        if (stream) stream.getTracks().forEach(track => track.stop());
+
+        try {
+            const newStream = await navigator.mediaDevices.getUserMedia({
+                video: true,
+                audio: {
+                    deviceId: micId ? { exact: micId } : undefined,
+                    noiseSuppression,
+                    echoCancellation: true,
+                },
+            });
+            setStream(newStream);
+            if (userVideo.current) userVideo.current.srcObject = newStream;
+
+            // Audio Context setup (unchanged)
+            if (audioContextRef.current) {
+                sourceNodeRef.current.disconnect();
+                gainNodeRef.current.disconnect();
+            }
+            audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
+            sourceNodeRef.current = audioContextRef.current.createMediaStreamSource(newStream);
+            gainNodeRef.current = audioContextRef.current.createGain();
+            sourceNodeRef.current.connect(gainNodeRef.current);
+            gainNodeRef.current.connect(audioContextRef.current.destination);
+            gainNodeRef.current.gain.value = localVolume;
+
+            const audioTrack = newStream.getAudioTracks()[0];
+            if (audioTrack) audioTrack.enabled = mic;
+            const videoTrack = newStream.getVideoTracks()[0];
+            if (videoTrack) videoTrack.enabled = camera;
+
+        } catch (error) {
+            console.error("Error accessing media devices.", error);
+            setCamera(false);
+            setMic(false);
+        }
+    };
 
   useEffect(() => {
     if (!name) {
@@ -76,44 +117,6 @@ function Room() {
       }
     };
 
-    const getStream = async (micId) => {
-      if (stream) stream.getTracks().forEach(track => track.stop());
-
-      try {
-        const newStream = await navigator.mediaDevices.getUserMedia({
-          video: true,
-          audio: {
-            deviceId: micId ? { exact: micId } : undefined,
-            noiseSuppression,
-            echoCancellation: true,
-          },
-        });
-        setStream(newStream);
-        if (userVideo.current) userVideo.current.srcObject = newStream;
-
-        if (audioContextRef.current) {
-          sourceNodeRef.current.disconnect();
-          gainNodeRef.current.disconnect();
-        }
-        audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
-        sourceNodeRef.current = audioContextRef.current.createMediaStreamSource(newStream);
-        gainNodeRef.current = audioContextRef.current.createGain();
-        sourceNodeRef.current.connect(gainNodeRef.current);
-        gainNodeRef.current.connect(audioContextRef.current.destination);
-        gainNodeRef.current.gain.value = localVolume;
-
-        const audioTrack = newStream.getAudioTracks()[0];
-        if (audioTrack) audioTrack.enabled = mic;
-        const videoTrack = newStream.getVideoTracks()[0];
-        if (videoTrack) videoTrack.enabled = camera;
-
-      } catch (error) {
-        console.error("Error accessing media devices.", error);
-        setCamera(false);
-        setMic(false);
-      }
-    };
-
     getDevices();
     getStream(selectedMic);
 
@@ -125,32 +128,80 @@ function Room() {
     return () => {
       clearTimeout(joinRequestTimer);
       if (stream) stream.getTracks().forEach(track => track.stop());
+      // 🔑 CLEANUP: Stop the screen stream too
+      if (screenStream) screenStream.getTracks().forEach(track => track.stop()); 
       if (audioContextRef.current) audioContextRef.current.close();
     };
   }, [name, selectedMic, localVolume, noiseSuppression, navigate, roomId]);
 
   const toggleChat = () => {
-    setIsChatOpen(prev => !prev);
-    // Ensure only one right panel is open at a time
-    if (isTranslationPanelOpen) setIsTranslationPanelOpen(false);
-    if (isParticipantsOpen) setIsParticipantsOpen(false);
-  };
-  const toggleScreenShare = () => setIsScreenSharing(prev => !prev);
+    setIsChatOpen(prev => !prev);
+    // Ensure only one right panel is open at a time
+    if (isTranslationPanelOpen) setIsTranslationPanelOpen(false);
+    if (isParticipantsOpen) setIsParticipantsOpen(false);
+  };
+    
+    // 🔑 UPDATED: Logic to handle screen sharing using getDisplayMedia
+    const toggleScreenShare = async () => {
+        if (!isScreenSharing) {
+            // Start screen sharing
+            try {
+                // Get the screen share stream
+                const newScreenStream = await navigator.mediaDevices.getDisplayMedia({
+                    video: true,
+                    audio: true, // System audio might not work on all browsers/OS combinations
+                });
+                
+                // Set the screen stream in state
+                setScreenStream(newScreenStream);
+                setIsScreenSharing(true);
+
+                // This handles when the user clicks the browser's native "Stop Sharing" button
+                newScreenStream.getVideoTracks()[0].onended = () => {
+                    console.log("Screen share stopped by user's browser controls.");
+                    setIsScreenSharing(false);
+                    setScreenStream(null);
+                    // 🚨 In a real WebRTC app, you would notify peers and switch to camera
+                };
+                
+                // Set the user's video element to display the screen stream immediately
+                if (userVideo.current) userVideo.current.srcObject = newScreenStream;
+                
+            } catch (err) {
+                console.error("Error starting screen share:", err);
+                setIsScreenSharing(false);
+                setScreenStream(null);
+            }
+        } else {
+            // Stop screen sharing manually
+            if (screenStream) {
+                screenStream.getTracks().forEach(track => track.stop());
+            }
+            setIsScreenSharing(false);
+            setScreenStream(null);
+            
+            // Switch back to the camera stream
+            if (userVideo.current && stream) {
+                userVideo.current.srcObject = stream;
+            }
+        }
+    };
+
   const toggleSettings = () => setIsSettingsOpen(prev => !prev);
   const toggleParticipants = () => {
-    setIsParticipantsOpen(prev => !prev);
-    // Ensure only one right panel is open at a time
-    if (isChatOpen) setIsChatOpen(false);
-    if (isTranslationPanelOpen) setIsTranslationPanelOpen(false);
-  };
+    setIsParticipantsOpen(prev => !prev);
+    // Ensure only one right panel is open at a time
+    if (isChatOpen) setIsChatOpen(false);
+    if (isTranslationPanelOpen) setIsTranslationPanelOpen(false);
+  };
   const toggleEmojiPicker = () => setIsEmojiPickerOpen(prev => !prev);
   // ✅ NEW: Toggle function for Translation Panel
   const toggleTranslationPanel = () => {
-    setIsTranslationPanelOpen(prev => !prev);
-    // Ensure only one right panel is open at a time
-    if (isChatOpen) setIsChatOpen(false);
-    if (isParticipantsOpen) setIsParticipantsOpen(false);
-  };
+    setIsTranslationPanelOpen(prev => !prev);
+    // Ensure only one right panel is open at a time
+    if (isChatOpen) setIsChatBoxOpen(false);
+    if (isParticipantsOpen) setIsParticipantsOpen(false);
+  };
 
   const sendReaction = (reaction) => {
     console.log(`Sending reaction: ${reaction}`);
@@ -177,6 +228,11 @@ function Room() {
   };
 
   const toggleCamera = () => {
+    // Prevent camera toggle during screen share for simplicity
+    if (isScreenSharing) {
+        console.warn("Cannot toggle camera while screen sharing.");
+        return;
+    }
     if (stream) {
       const videoTrack = stream.getVideoTracks()[0];
       if (videoTrack) {
@@ -273,7 +329,7 @@ function Room() {
               {reactionNotification} Reaction Sent!
           </div>
       )}
-    
+    
       {handRaiseNotification && (
           <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 bg-yellow-500 text-black p-3 rounded-lg shadow-xl font-bold animate-pulse">
               {handRaiseNotification}
@@ -300,7 +356,7 @@ function Room() {
             <button onClick={toggleHandRaise} className={`text-2xl ${isHandRaised ? 'text-yellow-400' : 'text-gray-400 hover:text-white'}`} title={isHandRaised ? "Lower Hand" : "Raise Hand"}>
               <FontAwesomeIcon icon={faHandPaper} />
             </button>
-            <button onClick={toggleCamera} className={`text-2xl ${camera ? 'text-white' : 'text-red-500'} hover:text-white`} title={camera ? "Turn Camera Off" : "Turn Camera On"}>
+            <button onClick={toggleCamera} className={`text-2xl ${camera ? 'text-white' : 'text-red-500'} hover:text-white`} title={camera ? "Turn Camera Off" : "Turn Camera On"} disabled={isScreenSharing}>
               <FontAwesomeIcon icon={camera ? faVideo : faVideoSlash} />
             </button>
             <button onClick={toggleMic} className={`text-2xl ${mic ? 'text-white' : 'text-red-500'} hover:text-white`} title={mic ? "Turn Mic Off" : "Turn Mic On"}>
@@ -309,7 +365,11 @@ function Room() {
           </div>
 
           <button
-            onClick={() => { if(stream) stream.getTracks().forEach(t => t.stop()); navigate(`/prejoin/${roomId}`); }}
+            onClick={() => { 
+                if(stream) stream.getTracks().forEach(t => t.stop()); 
+                if(screenStream) screenStream.getTracks().forEach(t => t.stop());
+                navigate(`/prejoin/${roomId}`); 
+            }}
             className="w-10 h-10 p-3 flex items-center justify-center bg-red-600 text-white font-bold rounded-lg hover:bg-red-700 transition-colors duration-200"
             title="Leave Meeting"
           >
@@ -324,7 +384,6 @@ function Room() {
               <FontAwesomeIcon icon={faCommentDots} />
             </button>
             <Recording stream={stream} />
-            {/* ✅ UPDATED: Call toggleTranslationPanel */}
             <button onClick={toggleTranslationPanel} className={`text-2xl ${isTranslationPanelOpen ? 'text-white' : 'text-gray-400 hover:text-white'} transition-colors duration-200`} title="Translation & Transcription">
               <FontAwesomeIcon icon={faLanguage} />
             </button>
@@ -342,18 +401,27 @@ function Room() {
 
         {isEmojiPickerOpen && <EmojiPicker />}
 
-        {/* Adjust the main content area's margin based on which right panel is open */}
+        {/* Main Video Grid */}
         <div className={`flex-1 transition-all duration-300 ${
           isChatOpen || isParticipantsOpen || isTranslationPanelOpen ? 'mr-80' : 'mr-0'
         } p-2 h-full w-full gap-2 ${containerClass}`}>
           {participants.map(user => (
             <div key={user.id} className={itemClass}>
+                {/* 🔑 UPDATED: Logic to display screen stream or camera stream */}
               {user.id === 'me' ? (
-                <video ref={userVideo} autoPlay muted playsInline className="w-full h-full object-cover" />
+                // Use the screenStream if sharing, otherwise use the camera stream
+                <video 
+                    ref={userVideo} 
+                    srcObject={isScreenSharing ? screenStream : stream} 
+                    autoPlay muted playsInline 
+                    className={`w-full h-full ${isScreenSharing ? 'object-contain bg-black' : 'object-cover'}`} 
+                />
               ) : (
                 <img src={user.videoUrl} alt={user.name} className="w-full h-full object-cover" />
               )}
-              {user.id === 'me' && !camera && (
+                
+                {/* Check both camera off AND NOT screen sharing for the overlay */}
+              {user.id === 'me' && !camera && !isScreenSharing && (
                 <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-70">
                     <span className="text-white text-lg font-semibold">Camera Off</span>
                 </div>
@@ -379,13 +447,13 @@ function Room() {
           </div>
         )}
 
-        {/* ✅ NEW: Render TranslationPanel when open */}
         {isTranslationPanelOpen && <TranslationPanel onClose={() => setIsTranslationPanelOpen(false)} />}
       </div>
 
-      {isScreenSharing && <ScreenShare stream={stream} />}
+    {/* 🔑 UPDATED: Pass the screenStream to the ScreenShare component */}
+    {isScreenSharing && <ScreenShare stream={screenStream} />}
 
-      {/* SETTINGS MODAL */}
+      {/* SETTINGS MODAL (Unchanged) */}
       {isSettingsOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center z-50">
           <div className="bg-[#2E4242] p-8 rounded-xl shadow-2xl text-white max-w-lg w-full">
@@ -473,11 +541,14 @@ function Room() {
                 </div>
               </div>
             ))}
-          </div>
+        </div>
         </div>
       )}
     </div>
   );
-}
+} // <-- The closing brace for the 'Room' function
+// 548 | }
+// 549 |
+// 550 | export default Room;
 
 export default Room;
