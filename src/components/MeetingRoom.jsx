@@ -25,11 +25,13 @@ function Room() {
   const [pendingParticipants, setPendingParticipants] = useState([]);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isScreenSharing, setIsScreenSharing] = useState(false);
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false); // ✅ This state is correctly toggled
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isParticipantsOpen, setIsParticipantsOpen] = useState(false);
   const [isHandRaised, setIsHandRaised] = useState(false);
   const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
   const [reactionNotification, setReactionNotification] = useState(null);
+  // ✅ NEW: State for the Hand Raised Notification
+  const [handRaiseNotification, setHandRaiseNotification] = useState(null);
 
   const [camera, setCamera] = useState(cameraOn ?? true);
   const [mic, setMic] = useState(micOn ?? true);
@@ -127,7 +129,7 @@ function Room() {
 
   const toggleChat = () => setIsChatOpen(prev => !prev);
   const toggleScreenShare = () => setIsScreenSharing(prev => !prev);
-  const toggleSettings = () => setIsSettingsOpen(prev => !prev); // ✅ This function is correct
+  const toggleSettings = () => setIsSettingsOpen(prev => !prev);
   const toggleParticipants = () => setIsParticipantsOpen(prev => !prev);
   const toggleEmojiPicker = () => setIsEmojiPickerOpen(prev => !prev);
 
@@ -138,9 +140,22 @@ function Room() {
     setTimeout(() => setReactionNotification(null), 3000);
   };
 
+  // ✅ UPDATED: Added logic to set/clear the notification
   const toggleHandRaise = () => {
-    setIsHandRaised(prev => !prev);
-    console.log(`Hand is now ${!isHandRaised ? 'raised' : 'lowered'}`);
+    setIsHandRaised(prev => {
+      const newState = !prev;
+      if (newState) {
+        const message = `${name} has raised their hand ✋!`;
+        setHandRaiseNotification(message);
+        // Clear notification after 5 seconds
+        setTimeout(() => setHandRaiseNotification(null), 5000);
+      } else {
+        // Clear notification immediately if hand is lowered manually
+        setHandRaiseNotification(null);
+      }
+      console.log(`Hand is now ${newState ? 'raised' : 'lowered'}`);
+      return newState;
+    });
   };
 
   const toggleCamera = () => {
@@ -169,9 +184,6 @@ function Room() {
 
   const handleAudioInputChange = (e) => {
     setSelectedMic(e.target.value);
-    // Re-run useEffect to get a new stream with the selected microphone
-    // Note: This is an oversimplification. In a real app, you'd trigger a new media stream acquisition.
-    // Since selectedMic is a dependency of useEffect, changing it will trigger a stream update.
   };
   const handleAudioOutputChange = async (e) => {
     setSelectedSpeaker(e.target.value);
@@ -187,7 +199,7 @@ function Room() {
     if (gainNodeRef.current) gainNodeRef.current.gain.value = v;
   };
 
-  const toggleNoiseSuppression = () => setNoiseSuppression(prev => !prev); // Noise suppression change triggers useEffect
+  const toggleNoiseSuppression = () => setNoiseSuppression(prev => !prev);
 
   const handleAdmit = (userToAdmit) => {
     setParticipants(prev => [...prev, userToAdmit]);
@@ -243,6 +255,13 @@ function Room() {
               {reactionNotification} Reaction Sent!
           </div>
       )}
+    
+      {/* ✅ NEW: Hand Raised Notification */}
+      {handRaiseNotification && (
+          <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 bg-yellow-500 text-black p-3 rounded-lg shadow-xl font-bold animate-pulse">
+              {handRaiseNotification}
+          </div>
+      )}
 
       <div className="flex justify-between items-center p-4 bg-[#1E1F21] flex-shrink-0">
         <div className="flex items-center space-x-2 p-2 bg-[#1E1F21] text-white font-bold">
@@ -261,6 +280,7 @@ function Room() {
             <button onClick={toggleEmojiPicker} className={`text-2xl ${isEmojiPickerOpen ? 'text-white' : 'text-gray-400 hover:text-white'}`} title="Send Reaction">
               <FontAwesomeIcon icon={faSmileWink} />
             </button>
+            {/* The hand raise button is correctly using the state to change color */}
             <button onClick={toggleHandRaise} className={`text-2xl ${isHandRaised ? 'text-yellow-400' : 'text-gray-400 hover:text-white'}`} title={isHandRaised ? "Lower Hand" : "Raise Hand"}>
               <FontAwesomeIcon icon={faHandPaper} />
             </button>
@@ -343,7 +363,7 @@ function Room() {
 
       {isScreenSharing && <ScreenShare stream={stream} />}
 
-      {/* ❌ FIX: RENDER THE SETTINGS MODAL WHEN isSettingsOpen IS TRUE */}
+      {/* SETTINGS MODAL (from previous fix) */}
       {isSettingsOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center z-50">
           <div className="bg-[#2E4242] p-8 rounded-xl shadow-2xl text-white max-w-lg w-full">
