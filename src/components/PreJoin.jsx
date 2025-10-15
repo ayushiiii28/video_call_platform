@@ -45,6 +45,7 @@ function PreJoin() {
   const { roomId } = useParams();
   const navigate = useNavigate();
   const userVideo = useRef(null);
+  const API_BASE = import.meta.env?.VITE_API_BASE || "http://localhost:8000";
 
   const [name, setName] = useState("");
   const [stream, setStream] = useState(null);
@@ -207,24 +208,45 @@ function PreJoin() {
     // but relying on the useEffect dependency is generally the React way.
   };
 
-  const joinRoom = () => {
+  const joinRoom = async () => {
     if (!name) {
       setErrorMessage("Please enter your name.");
       return;
     }
-    setErrorMessage("");
-    navigate(`/room/${roomId}`, {
-      state: {
-        name,
-        cameraOn,
-        micOn,
-        selectedAudioInput,
-        selectedAudioOutput,
-        isNoiseSuppressionOn,
-        selectedLanguage,
-        selectedBackgroundEffect,
-      },
-    });
+    const token = sessionStorage.getItem("access_token");
+    if (!token) {
+      navigate("/login");
+      return;
+    }
+    try {
+      setErrorMessage("");
+      const response = await fetch(`${API_BASE}/api/v1/sessions/${roomId}/participants`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json"
+        }
+      });
+      if (!response.ok) {
+        const maybeJson = await response.json().catch(() => null);
+        const detail = maybeJson?.detail || "Failed to join the session.";
+        throw new Error(Array.isArray(detail) ? detail[0]?.msg || "Failed to join the session." : detail);
+      }
+      navigate(`/room/${roomId}`, {
+        state: {
+          name,
+          cameraOn,
+          micOn,
+          selectedAudioInput,
+          selectedAudioOutput,
+          isNoiseSuppressionOn,
+          selectedLanguage,
+          selectedBackgroundEffect,
+        },
+      });
+    } catch (e) {
+      setErrorMessage(e?.message || "Unexpected error joining session.");
+    }
   };
 
   return (

@@ -5,13 +5,51 @@ import { useNavigate } from "react-router-dom";
 function Login() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
   const navigate = useNavigate();
 
-  const handleLogin = () => {
-    // Placeholder: replace with real auth logic
-    console.log(`Attempting login for ${username}`);
-    // Since we don't have routing setup, we'll just log
-    // In a real app, this would be navigate("/");
+  const API_BASE = import.meta.env?.VITE_API_BASE || "http://localhost:8000";
+
+  const handleLogin = async () => {
+    setError("");
+    if (!username.trim() || !password.trim()) {
+      setError("Username and password are required.");
+      return;
+    }
+    setLoading(true);
+    try {
+      // FastAPI OAuth2PasswordRequestForm expects x-www-form-urlencoded with fields: username, password
+      const body = new URLSearchParams();
+      body.append("username", username);
+      body.append("password", password);
+
+      const response = await fetch(`${API_BASE}/api/v1/auth/login`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body
+      });
+
+      if (!response.ok) {
+        const maybeJson = await response.json().catch(() => null);
+        const detail = maybeJson?.detail || "Login failed.";
+        throw new Error(Array.isArray(detail) ? detail[0]?.msg || "Login failed." : detail);
+      }
+
+      const data = await response.json();
+      // { access_token, refresh_token, token_type }
+      sessionStorage.setItem("access_token", data.access_token);
+      sessionStorage.setItem("refresh_token", data.refresh_token);
+      sessionStorage.setItem("token_type", data.token_type || "bearer");
+
+      navigate("/");
+    } catch (e) {
+      setError(e?.message || "Unexpected error. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -66,10 +104,14 @@ function Login() {
           {/* Login Button - Text/border color set to black (low contrast, as per previous request) */}
           <button
             onClick={handleLogin}
-            className="w-[364px] h-[60px] mt-2 px-6 py-3 text-black rounded-lg border-2 border-black bg-transparent font-semibold text-lg hover:bg-black/10 transition-all duration-300 transform hover:scale-105 active:scale-95 self-center"
+            disabled={loading}
+            className="w-[364px] h-[60px] mt-2 px-6 py-3 text-black rounded-lg border-2 border-black bg-transparent font-semibold text-lg hover:bg-black/10 transition-all duration-300 transform hover:scale-105 active:scale-95 self-center disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            Login
+            {loading ? "Signing in..." : "Login"}
           </button>
+          {error ? (
+            <p className="text-red-700 text-sm text-center mt-2">{error}</p>
+          ) : null}
         </div>
       </div>
       

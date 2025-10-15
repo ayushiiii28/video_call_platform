@@ -6,13 +6,58 @@ function Signup() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const navigate = useNavigate();
 
-  const handleSignup = () => {
-    // Placeholder: replace with real auth
-    // Using console.log instead of alert() for a better UI experience.
-    console.log(`Attempting signup for ${name}`);
-    // In a real app, this would be navigate("/login");
+  const API_BASE = import.meta.env?.VITE_API_BASE || "http://localhost:8000";
+
+  const validate = () => {
+    if (!name.trim() || !email.trim() || !password.trim()) {
+      return "All fields are required.";
+    }
+    // Simple email pattern fallback (backend does strict validation)
+    const emailOk = /.+@.+\..+/.test(email);
+    if (!emailOk) return "Please enter a valid email address.";
+    if (password.length < 8) return "Password must be at least 8 characters long.";
+    if (!/[0-9]/.test(password)) return "Password must contain at least one number.";
+    if (!/[A-Z]/.test(password)) return "Password must contain at least one uppercase letter.";
+    return "";
+  };
+
+  const handleSignup = async () => {
+    const validationMessage = validate();
+    if (validationMessage) {
+      setError(validationMessage);
+      setSuccess("");
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+    setSuccess("");
+    try {
+      const response = await fetch(`${API_BASE}/api/v1/auth/register`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fullName: name, email, password })
+      });
+
+      if (!response.ok) {
+        const maybeJson = await response.json().catch(() => null);
+        const detail = maybeJson?.detail || "Signup failed.";
+        throw new Error(Array.isArray(detail) ? detail[0]?.msg || "Signup failed." : detail);
+      }
+
+      setSuccess("Account created successfully. Redirecting to login...");
+      // Brief pause for UX, then navigate
+      setTimeout(() => navigate("/login"), 800);
+    } catch (e) {
+      setError(e?.message || "Unexpected error. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -61,10 +106,17 @@ function Signup() {
           {/* Button - Changed text/border color to black for consistency (low contrast) */}
           <button
             onClick={handleSignup}
-            className="w-[364px] h-[60px] mt-2 px-6 py-3 text-black rounded-lg border-2 border-black bg-transparent font-semibold text-lg hover:bg-black/10 transition-all duration-300 transform hover:scale-105 active:scale-95 self-center"
+            disabled={loading}
+            className="w-[364px] h-[60px] mt-2 px-6 py-3 text-black rounded-lg border-2 border-black bg-transparent font-semibold text-lg hover:bg-black/10 transition-all duration-300 transform hover:scale-105 active:scale-95 self-center disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            Create Account
+            {loading ? "Creating..." : "Create Account"}
           </button>
+          {error ? (
+            <p className="text-red-700 text-sm text-center mt-2">{error}</p>
+          ) : null}
+          {success ? (
+            <p className="text-green-700 text-sm text-center mt-2">{success}</p>
+          ) : null}
         </div>
       </div>
       

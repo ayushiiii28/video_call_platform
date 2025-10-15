@@ -1,14 +1,69 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
-export default function ChatBox() {
+export default function ChatBox({ sessionId, selfName }) {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
+  const API_BASE = import.meta.env?.VITE_API_BASE || "http://localhost:8000";
+  const listEndRef = useRef(null);
+  const tokenRef = useRef(null);
 
-  const handleSend = (e) => {
+  // Load chat history
+  useEffect(() => {
+    tokenRef.current = sessionStorage.getItem("access_token");
+    if (!tokenRef.current || !sessionId) return;
+
+    let isMounted = true;
+    let pollId;
+
+    const loadHistory = async () => {
+      try {
+      const res = await fetch(`${API_BASE}/api/v1/sessions/${sessionId}/chat/`, {
+          headers: { "Authorization": `Bearer ${tokenRef.current}` }
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        const list = (data?.data || []).map(m => ({ id: m.id, text: `${m.user_full_name}: ${m.content}` }));
+        if (isMounted) setMessages(list);
+      } catch (_e) { /* ignore */ }
+    };
+
+    loadHistory();
+    pollId = setInterval(loadHistory, 2000);
+
+    return () => {
+      isMounted = false;
+      if (pollId) clearInterval(pollId);
+    };
+  }, [sessionId]);
+
+  // Auto-scroll to bottom when messages change
+  useEffect(() => {
+    if (listEndRef.current) {
+      listEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [messages]);
+
+  const handleSend = async (e) => {
     e.preventDefault();
     if (!input.trim()) return;
-    setMessages([...messages, { id: Date.now(), text: input }]);
-    setInput("");
+    const token = sessionStorage.getItem("access_token");
+    if (!token) return;
+    try {
+      const res = await fetch(`${API_BASE}/api/v1/sessions/${sessionId}/chat/`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ content: input })
+      });
+      if (!res.ok) return;
+      const saved = await res.json();
+      setMessages(prev => [...prev, { id: saved.id, text: `${saved.user_full_name || selfName}: ${saved.content}` }]);
+      setInput("");
+    } catch (_e) {
+      // ignore errors
+    }
   };
 
   return (
@@ -31,6 +86,7 @@ export default function ChatBox() {
             {msg.text}
           </div>
         ))}
+        <div ref={listEndRef} />
       </div>
 
       {/* Input */}

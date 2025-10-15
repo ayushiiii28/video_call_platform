@@ -1,8 +1,10 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { MonitorUp, MonitorX } from "lucide-react";
 
-export default function ScreenShare() {
+export default function ScreenShare({ sessionId, onStart, onStop }) {
   const [isSharing, setIsSharing] = useState(false);
+  const displayStreamRef = useRef(null);
+  const API_BASE = import.meta.env?.VITE_API_BASE || "http://localhost:8000";
 
   const handleScreenShare = async () => {
     try {
@@ -11,13 +13,40 @@ export default function ScreenShare() {
         const stream = await navigator.mediaDevices.getDisplayMedia({
           video: true,
         });
-        console.log("Screen sharing started:", stream);
-        // TODO: attach this stream to your peer connection (WebRTC)
+        displayStreamRef.current = stream;
+        if (onStart) {
+          try { onStart(stream); } catch (_) {}
+        }
+
+        // Call backend to mark screen sharing started
+        const token = sessionStorage.getItem("access_token");
+        if (token && sessionId) {
+          await fetch(`${API_BASE}/api/v1/sessions/${sessionId}/screenshare/start`, {
+            method: "POST",
+            headers: { "Authorization": `Bearer ${token}` }
+          }).catch(() => {});
+        }
+
         setIsSharing(true);
       } else {
         // Stop screen share
-        // If using WebRTC, you'd stop sending the track here
-        console.log("Screen sharing stopped");
+        if (displayStreamRef.current) {
+          displayStreamRef.current.getTracks().forEach(t => t.stop());
+          displayStreamRef.current = null;
+        }
+        if (onStop) {
+          try { onStop(); } catch (_) {}
+        }
+
+        // Call backend to mark screen sharing stopped
+        const token = sessionStorage.getItem("access_token");
+        if (token && sessionId) {
+          await fetch(`${API_BASE}/api/v1/sessions/${sessionId}/screenshare/stop`, {
+            method: "POST",
+            headers: { "Authorization": `Bearer ${token}` }
+          }).catch(() => {});
+        }
+
         setIsSharing(false);
       }
     } catch (err) {

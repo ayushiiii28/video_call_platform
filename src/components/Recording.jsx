@@ -2,11 +2,12 @@ import React, { useState, useRef, useEffect } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCircle } from "@fortawesome/free-solid-svg-icons";
 
-export default function Recording({ stream }) {
+export default function Recording({ stream, sessionId }) {
   const [isRecording, setIsRecording] = useState(false);
   const [error, setError] = useState("");
   const mediaRecorderRef = useRef(null);
   const recordedChunksRef = useRef([]);
+  const API_BASE = import.meta.env?.VITE_API_BASE || "http://localhost:8000";
 
   useEffect(() => {
     if (!stream) {
@@ -16,14 +17,29 @@ export default function Recording({ stream }) {
     }
   }, [stream]);
 
-  const toggleRecording = () => {
+  const toggleRecording = async () => {
     if (!stream) {
       setError("Cannot record: no active media stream.");
+      return;
+    }
+    const token = localStorage.getItem("access_token");
+    if (!token) {
+      setError("You must be logged in to record.");
       return;
     }
 
     if (!isRecording) {
       try {
+        // Call backend to start recording
+        const res = await fetch(`${API_BASE}/api/v1/sessions/${sessionId}/recording/start`, {
+          method: "POST",
+          headers: { "Authorization": `Bearer ${token}` }
+        });
+        if (!res.ok) {
+          const maybeJson = await res.json().catch(() => null);
+          const detail = maybeJson?.detail || "Failed to start recording.";
+          throw new Error(Array.isArray(detail) ? detail[0]?.msg || "Failed to start recording." : detail);
+        }
         recordedChunksRef.current = [];
         const mediaRecorder = new MediaRecorder(stream);
         mediaRecorder.ondataavailable = (e) => {
@@ -34,17 +50,36 @@ export default function Recording({ stream }) {
         setIsRecording(true);
       } catch (err) {
         console.error("Recording error:", err);
-        setError("Recording failed. Check permissions.");
+        setError(err?.message || "Recording failed. Check permissions.");
       }
     } else {
-      mediaRecorderRef.current.stop();
-      const blob = new Blob(recordedChunksRef.current, { type: "video/webm" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `recording_${Date.now()}.webm`;
-      a.click();
-      setIsRecording(false);
+      try {
+        // Stop client recording and optionally send/handle upload if needed
+        mediaRecorderRef.current.stop();
+        const blob = new Blob(recordedChunksRef.current, { type: "video/webm" });
+        // Optionally could upload to your backend if desired
+
+        // Call backend to stop recording and finalize
+        const res = await fetch(`${API_BASE}/api/v1/sessions/${sessionId}/recording/stop`, {
+          method: "POST",
+          headers: { "Authorization": `Bearer ${token}` }
+        });
+        if (!res.ok) {
+          const maybeJson = await res.json().catch(() => null);
+          const detail = maybeJson?.detail || "Failed to stop recording.";
+          throw new Error(Array.isArray(detail) ? detail[0]?.msg || "Failed to stop recording." : detail);
+        }
+
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `recording_${Date.now()}.webm`;
+        a.click();
+        setIsRecording(false);
+      } catch (err) {
+        console.error("Stop recording error:", err);
+        setError(err?.message || "Failed to stop recording.");
+      }
     }
   };
 

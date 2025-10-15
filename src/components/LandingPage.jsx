@@ -5,7 +5,9 @@ import { v4 as uuidv4 } from "uuid";
 function LandingPage() {
   const [roomId, setRoomId] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+  const [isAuthed, setIsAuthed] = useState(!!sessionStorage.getItem("access_token"));
   const navigate = useNavigate();
+  const API_BASE = import.meta.env?.VITE_API_BASE || "http://localhost:8000";
 
   const handleJoinRoom = (e) => {
     e.preventDefault();
@@ -17,9 +19,36 @@ function LandingPage() {
     }
   };
 
-  const handleInstantMeeting = () => {
-    const newRoomId = uuidv4();
-    navigate(`/prejoin/${newRoomId}`);
+  const handleInstantMeeting = async () => {
+    setErrorMessage("");
+    const token = sessionStorage.getItem("access_token");
+    if (!token) {
+      navigate("/login");
+      return;
+    }
+    try {
+      const response = await fetch(`${API_BASE}/api/v1/sessions/start`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json"
+        }
+      });
+      if (!response.ok) {
+        const maybeJson = await response.json().catch(() => null);
+        const detail = maybeJson?.detail || "Failed to start an instant meeting.";
+        throw new Error(Array.isArray(detail) ? detail[0]?.msg || "Failed to start an instant meeting." : detail);
+      }
+      const data = await response.json();
+      const createdRoomId = data?.room_id || data?.data?.room_id;
+      const createdSessionId = data?.session_id || data?.data?.session_id || data?.id; // SessionOut alias
+      if (!createdRoomId || !createdSessionId) {
+        throw new Error("Server did not return a room_id.");
+      }
+      navigate(`/prejoin/${createdSessionId}`);
+    } catch (e) {
+      setErrorMessage(e?.message || "Unexpected error starting meeting.");
+    }
   };
 
   // New handler for scheduling a meeting
@@ -33,6 +62,14 @@ function LandingPage() {
 
   const handleLogIn = () => {
     navigate("/login");
+  };
+
+  const handleLogout = () => {
+    sessionStorage.removeItem("access_token");
+    sessionStorage.removeItem("refresh_token");
+    sessionStorage.removeItem("token_type");
+    setIsAuthed(false);
+    navigate("/");
   };
 
   return (
@@ -74,37 +111,56 @@ function LandingPage() {
           Video Call or Team Meet?
         </h1>
 
-        {/* Login / Signup buttons */}
-        <div style={{ display: "flex", gap: "2rem", margin: "2rem 0" }}>
-          <button
-            onClick={handleSignUp}
-            style={{
-              padding: "0.5rem 2rem",
-              fontSize: "1rem",
-              borderRadius: "5px",
-              border: "1px solid black",
-              backgroundColor: "black", // Sign Up button is black
-              color: "white",
-              cursor: "pointer",
-            }}
-          >
-            Sign Up
-          </button>
-          <button
-            onClick={handleLogIn}
-            style={{
-              padding: "0.5rem 2rem",
-              fontSize: "1rem",
-              borderRadius: "5px",
-              border: "1px solid #1E1E1E",
-              backgroundColor: "#1E1E1E", // Log In button is #1E1E1E
-              color: "white",
-              cursor: "pointer",
-            }}
-          >
-            Log In
-          </button>
-        </div>
+        {/* Auth buttons: show Sign Up / Log In if not authenticated; show Logout if authenticated */}
+        {!isAuthed ? (
+          <div style={{ display: "flex", gap: "2rem", margin: "2rem 0" }}>
+            <button
+              onClick={handleSignUp}
+              style={{
+                padding: "0.5rem 2rem",
+                fontSize: "1rem",
+                borderRadius: "5px",
+                border: "1px solid black",
+                backgroundColor: "black",
+                color: "white",
+                cursor: "pointer",
+              }}
+            >
+              Sign Up
+            </button>
+            <button
+              onClick={handleLogIn}
+              style={{
+                padding: "0.5rem 2rem",
+                fontSize: "1rem",
+                borderRadius: "5px",
+                border: "1px solid #1E1E1E",
+                backgroundColor: "#1E1E1E",
+                color: "white",
+                cursor: "pointer",
+              }}
+            >
+              Log In
+            </button>
+          </div>
+        ) : (
+          <div style={{ display: "flex", gap: "2rem", margin: "2rem 0" }}>
+            <button
+              onClick={handleLogout}
+              style={{
+                padding: "0.5rem 2rem",
+                fontSize: "1rem",
+                borderRadius: "5px",
+                border: "1px solid #c53030",
+                backgroundColor: "#c53030",
+                color: "white",
+                cursor: "pointer",
+              }}
+            >
+              Logout
+            </button>
+          </div>
+        )}
 
         {/* Meeting code input and instant meeting button */}
         <div style={{ marginTop: "2rem" }}>
