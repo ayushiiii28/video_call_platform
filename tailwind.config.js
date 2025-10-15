@@ -13,3 +13,21 @@ export default {
   },
   plugins: [],
 };
+// tailwind.config.js
+
+module.exports = {
+  content: [
+    // ... your existing content paths
+  ],
+  theme: {
+    extend: {
+      // 🛑 CRITICAL FIX: Define custom background images here
+      backgroundImage: {
+        // Use the root-relative path (starting with /)
+        'office-bg': 'url("/OfficeImage.jpeg")', 
+        'living-room-bg': 'url("/livingRoom.jpeg")',
+      }
+    },
+  },
+  plugins: [],
+}
