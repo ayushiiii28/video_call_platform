@@ -17,7 +17,6 @@ import {
     faDesktop 
 } from '@fortawesome/free-solid-svg-icons';
 
-// 1. CUSTOM IMAGE IMPORT: Assuming 'OneVoiceIcon.jpg' is in your src/assets folder
 import TranslationIconImage from './OneVoiceIcon.png'; // **ADJUST PATH IF NECESSARY**
 
 function Room() {
@@ -409,16 +408,18 @@ function Room() {
         );
     };
 
-    // 🌟 NEW Component: The actual captions overlay
+    // 🌟 UPDATED Component: The actual captions overlay
     const TranslatedCaptionsOverlay = () => {
         if (!isTranslatedCaptionsOn) return null;
         
         return (
-            <div className="fixed bottom-10 left-1/2 transform -translate-x-1/2 w-full max-w-4xl bg-black bg-opacity-80 text-white text-center text-xl p-3 rounded-lg z-50 font-sans shadow-2xl">
-                {/* This is where the live translated text will appear */}
-                <p className="font-bold text-yellow-300">Translated Caption:</p>
-                <p className="text-white italic">"Hello everyone, thank you for joining. The quarterly review starts now."</p>
-                <span className="text-sm text-gray-400">Speaker: {name} (English to French)</span>
+            // 🌟 KEY CHANGES HERE: fixed, bottom-0, left-[50px] (to clear the control bar), right-0
+            <div className="fixed bottom-0 left-[50px] right-0 h-20 bg-black bg-opacity-80 text-white flex flex-col justify-center items-center z-50 font-sans shadow-2xl">
+                <div className="text-center px-4">
+                    <p className="font-bold text-yellow-300 text-base">Translated Caption:</p>
+                    <p className="text-white italic text-lg leading-tight">"Hello everyone, thank you for joining. The quarterly review starts now."</p>
+                    <span className="text-xs text-gray-400">Speaker: {name} (English to French)</span>
+                </div>
             </div>
         );
     };
@@ -514,14 +515,17 @@ function Room() {
                 {isEmojiPickerOpen && <EmojiPicker />}
 
                 {/* MAIN CONTENT AREA: Renders the screen share or gallery view */}
-                <div className={`flex-1 transition-all duration-300 ${
-                    isChatOpen || isParticipantsOpen || isTranslationPanelOpen ? 'mr-80' : 'mr-0'
-                } p-2 h-full w-full`}>
+                {/* 🌟 KEY CHANGE: Dynamic padding-bottom to lift the grid when captions are ON */}
+                {/* Adjusted padding to pb-20 (80px) to clear the 80px high caption bar */}
+                <div className={`flex-1 transition-all duration-300 
+                    ${isChatOpen || isParticipantsOpen || isTranslationPanelOpen ? 'mr-80' : 'mr-0'} 
+                    p-2 h-full w-full 
+                    ${isTranslatedCaptionsOn ? 'pb-20' : ''} 
+                    `}>
                     {renderMainContent()}
                 </div>
 
                 {/* Right Side Panels */}
-                {/* Note: Captions are now an overlay, these panels must close when captions are on */}
                 {isChatOpen && <div className="absolute top-0 right-0 h-full w-80 z-40 transition-transform duration-300"><ChatBox /></div>}
 
                 {isParticipantsOpen && (
