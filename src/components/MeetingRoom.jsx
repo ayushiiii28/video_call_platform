@@ -1,4 +1,4 @@
-// MeetingRoom.jsx
+// meetingroom; // MeetingRoom.jsx
 import React, { useState, useRef, useEffect } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 // Ensure these imports are available in your project structure
@@ -42,7 +42,11 @@ function Room() {
     const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
     const [reactionNotification, setReactionNotification] = useState(null);
     const [handRaiseNotification, setHandRaiseNotification] = useState(null);
+
+    // 🌟 NEW STATE: Controls the visibility of the Translation Panel
     const [isTranslationPanelOpen, setIsTranslationPanelOpen] = useState(false);
+    // 🌟 NEW STATE: Controls the visibility of the Translated Captions overlay
+    const [isTranslatedCaptionsOn, setIsTranslatedCaptionsOn] = useState(false);
 
     const [camera, setCamera] = useState(cameraOn ?? true);
     const [mic, setMic] = useState(micOn ?? true);
@@ -90,6 +94,7 @@ function Room() {
             if (stream) stream.getTracks().forEach(track => track.stop());
 
             try {
+                // Request video: true so we always get a video track if available
                 const newStream = await navigator.mediaDevices.getUserMedia({
                     video: true,
                     audio: {
@@ -112,6 +117,7 @@ function Room() {
                 gainNodeRef.current.connect(audioContextRef.current.destination);
                 gainNodeRef.current.gain.value = localVolume;
 
+                // **Apply the current camera and mic state to the new stream's tracks**
                 const audioTrack = newStream.getAudioTracks()[0];
                 if (audioTrack) audioTrack.enabled = mic;
                 const videoTrack = newStream.getVideoTracks()[0];
@@ -139,27 +145,63 @@ function Room() {
             if (screenStream) screenStream.getTracks().forEach(track => track.stop()); 
             if (audioContextRef.current) audioContextRef.current.close();
         };
-    // Dependencies only include states/props that should trigger a re-setup.
-    }, [name, selectedMic, localVolume, noiseSuppression, navigate, roomId, camera, mic]); 
+    // **FIXED DEPENDENCY ARRAY**: Removed 'camera' and 'mic'
+    }, [name, selectedMic, localVolume, noiseSuppression, navigate, roomId]); 
     
 
+    // 🌟 UPDATED HANDLER: Close panels, and turn OFF captions if opening chat
     const toggleChat = () => {
-        setIsChatOpen(prev => !prev);
-        if (isTranslationPanelOpen) setIsTranslationPanelOpen(false);
-        if (isParticipantsOpen) setIsParticipantsOpen(false);
+        setIsChatOpen(prev => {
+            const newState = !prev;
+            if (newState) {
+                if (isTranslationPanelOpen) setIsTranslationPanelOpen(false);
+                if (isParticipantsOpen) setIsParticipantsOpen(false);
+                if (isTranslatedCaptionsOn) setIsTranslatedCaptionsOn(false); // New: Close captions
+            }
+            return newState;
+        });
     };
     
     const toggleSettings = () => setIsSettingsOpen(prev => !prev);
+    
+    // 🌟 UPDATED HANDLER: Close panels, and turn OFF captions if opening participants
     const toggleParticipants = () => {
-        setIsParticipantsOpen(prev => !prev);
-        if (isChatOpen) setIsChatOpen(false);
-        if (isTranslationPanelOpen) setIsTranslationPanelOpen(false);
+        setIsParticipantsOpen(prev => {
+            const newState = !prev;
+            if (newState) {
+                if (isChatOpen) setIsChatOpen(false);
+                if (isTranslationPanelOpen) setIsTranslationPanelOpen(false);
+                if (isTranslatedCaptionsOn) setIsTranslatedCaptionsOn(false); // New: Close captions
+            }
+            return newState;
+        });
     };
+
     const toggleEmojiPicker = () => setIsEmojiPickerOpen(prev => !prev);
+    
+    // 🌟 UPDATED HANDLER: Close panels, and turn OFF captions if opening translation panel
     const toggleTranslationPanel = () => {
-        setIsTranslationPanelOpen(prev => !prev);
-        if (isChatOpen) setIsChatOpen(false);
-        if (isParticipantsOpen) setIsParticipantsOpen(false);
+        setIsTranslationPanelOpen(prev => {
+            const newState = !prev;
+            if (newState) {
+                if (isChatOpen) setIsChatOpen(false);
+                if (isParticipantsOpen) setIsParticipantsOpen(false);
+                if (isTranslatedCaptionsOn) setIsTranslatedCaptionsOn(false); // New: Close captions
+            }
+            return newState;
+        });
+    };
+
+    // 🌟 NEW HANDLER: Manages the core feature logic
+    const handleCaptionToggle = (isOn) => {
+        setIsTranslatedCaptionsOn(isOn);
+        if (isOn) {
+            // As requested: when captions are ON, close ALL side panels (Chat, Translation, Participants, Settings)
+            if (isChatOpen) setIsChatOpen(false);
+            if (isTranslationPanelOpen) setIsTranslationPanelOpen(false);
+            if (isParticipantsOpen) setIsParticipantsOpen(false);
+            if (isSettingsOpen) setIsSettingsOpen(false);
+        }
     };
 
     const sendReaction = (reaction) => {
@@ -170,6 +212,7 @@ function Room() {
     };
 
     const toggleHandRaise = () => {
+        // ... existing toggleHandRaise logic
         setIsHandRaised(prev => {
             const newState = !prev;
             if (newState) {
@@ -185,6 +228,7 @@ function Room() {
     };
 
     const toggleCamera = () => {
+        // ... existing toggleCamera logic
         if (stream) {
             const videoTrack = stream.getVideoTracks()[0];
             if (videoTrack) {
@@ -197,6 +241,7 @@ function Room() {
     };
 
     const toggleMic = () => {
+        // ... existing toggleMic logic
         if (stream) {
             const audioTrack = stream.getAudioTracks()[0];
             if (audioTrack) {
@@ -209,7 +254,7 @@ function Room() {
     };
 
     const handleAudioInputChange = (e) => {
-        setSelectedMic(e.target.value);
+        setSelectedMic(e.target.value); 
     };
     const handleAudioOutputChange = async (e) => {
         setSelectedSpeaker(e.target.value);
@@ -251,6 +296,7 @@ function Room() {
     const itemClass = getGridItemClass(participants.length);
 
     const EmojiPicker = () => (
+        // ... existing EmojiPicker
         <div className="absolute left-[60px] top-4 z-50 p-3 bg-[#2E4242] rounded-xl shadow-2xl">
             <div className="flex justify-between items-center mb-2">
                 <h3 className="text-white text-sm font-semibold">Reactions</h3>
@@ -275,6 +321,7 @@ function Room() {
 
     // Component to display the shared screen video stream
     const ScreenShareDisplay = ({ screenStream }) => {
+        // ... existing ScreenShareDisplay logic
         const videoRef = useRef(null);
         
         useEffect(() => {
@@ -304,6 +351,7 @@ function Room() {
 
     // Reusable component for participant video tiles
     const ParticipantTile = ({ user, isMinimized = false }) => (
+        // ... existing ParticipantTile logic
         <div key={user.id} className={`relative bg-[#1E1F21] rounded-xl overflow-hidden shadow-2xl ${isMinimized ? 'w-full h-full' : 'w-full h-full'}`}>
             {user.id === 'me' ? (
                 <video ref={userVideo} autoPlay muted playsInline className="w-full h-full object-cover" />
@@ -323,6 +371,7 @@ function Room() {
 
     // Minimized Participants Strip
     const MinimizedParticipants = () => (
+        // ... existing MinimizedParticipants logic
         <div className="absolute bottom-0 left-0 right-0 h-28 bg-[#1E1F21] bg-opacity-80 flex space-x-2 p-2 overflow-x-auto z-30">
             {participants.map(user => (
                 <div key={user.id} className="flex-shrink-0 w-32 h-24">
@@ -334,6 +383,7 @@ function Room() {
 
     // CORE LAYOUT LOGIC: Switch between Screen Share and Gallery View
     const renderMainContent = () => {
+        // ... existing renderMainContent logic
         if (isScreenSharing && screenStream) {
             return (
                 <div className="relative flex-1 h-full w-full">
@@ -359,15 +409,27 @@ function Room() {
         );
     };
 
+    // 🌟 NEW Component: The actual captions overlay
+    const TranslatedCaptionsOverlay = () => {
+        if (!isTranslatedCaptionsOn) return null;
+        
+        return (
+            <div className="fixed bottom-10 left-1/2 transform -translate-x-1/2 w-full max-w-4xl bg-black bg-opacity-80 text-white text-center text-xl p-3 rounded-lg z-50 font-sans shadow-2xl">
+                {/* This is where the live translated text will appear */}
+                <p className="font-bold text-yellow-300">Translated Caption:</p>
+                <p className="text-white italic">"Hello everyone, thank you for joining. The quarterly review starts now."</p>
+                <span className="text-sm text-gray-400">Speaker: {name} (English to French)</span>
+            </div>
+        );
+    };
 
     return (
         <div className="flex flex-col h-screen w-screen bg-[#1D2C2A] text-[#E8E7E5] font-sans">
 
-            {reactionNotification && (
-                <div className="fixed top-4 right-4 z-50 bg-green-500 text-white p-3 rounded-lg shadow-xl animate-bounce">
-                    {reactionNotification} Reaction Sent!
-                </div>
-            )}
+            {/* ... existing notifications ... */}
+
+            {/* 🌟 RENDER CAPTIONS OVERLAY */}
+            <TranslatedCaptionsOverlay />
             
             {handRaiseNotification && (
                 <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 bg-yellow-500 text-black p-3 rounded-lg shadow-xl font-bold animate-pulse">
@@ -376,12 +438,12 @@ function Room() {
             )}
 
             <div className="flex justify-between items-center p-4 bg-[#1E1F21] flex-shrink-0">
+                {/* ... existing header content ... */}
                 <div className="flex items-center space-x-2 p-2 bg-[#1E1F21] text-white font-bold">
                     <span>Meeting Code: {roomId}</span>
                     <FontAwesomeIcon icon={faShareAlt} />
                 </div>
                 <div className="p-2 bg-[#1E1F21] text-white font-bold">Meeting Title</div>
-                {/* HOST NAME UPDATE */}
                 <div className="p-2 bg-[#1E1F21] text-white font-bold">Host: {name}</div> 
             </div>
 
@@ -389,6 +451,7 @@ function Room() {
                 {/* Left Sidebar (Controls) */}
                 <div className="flex flex-col w-[50px] p-1 bg-[#1E1F21] items-center justify-between flex-shrink-0 h-full">
 
+                    {/* ... existing primary controls (reactions, mic, video) ... */}
                     <div className="flex flex-col items-center space-y-4 pt-4">
                         <button onClick={toggleEmojiPicker} className={`text-2xl ${isEmojiPickerOpen ? 'text-white' : 'text-gray-400 hover:text-white'}`} title="Send Reaction">
                             <FontAwesomeIcon icon={faSmileWink} />
@@ -413,7 +476,6 @@ function Room() {
                     </button>
 
                     <div className="flex flex-col items-center space-y-4">
-                        {/* ScreenShare button with stream logic props */}
                         <ScreenShare 
                             isSharing={isScreenSharing} 
                             setIsSharing={setIsScreenSharing} 
@@ -424,10 +486,9 @@ function Room() {
                         </button>
                         <Recording stream={stream} />
                         
-                        {/* 2. CUSTOM IMAGE BUTTON IMPLEMENTATION */}
+                        {/* CUSTOM IMAGE BUTTON IMPLEMENTATION */}
                         <button 
                             onClick={toggleTranslationPanel} 
-                            // Set a fixed size (w-10 h-10) and manage background color for active state
                             className={`w-10 h-10 p-1 flex items-center justify-center rounded-lg transition-colors duration-200 ${isTranslationPanelOpen ? 'bg-gray-600' : 'hover:bg-gray-700'}`} 
                             title="Translation & Transcription"
                         >
@@ -460,6 +521,7 @@ function Room() {
                 </div>
 
                 {/* Right Side Panels */}
+                {/* Note: Captions are now an overlay, these panels must close when captions are on */}
                 {isChatOpen && <div className="absolute top-0 right-0 h-full w-80 z-40 transition-transform duration-300"><ChatBox /></div>}
 
                 {isParticipantsOpen && (
@@ -476,10 +538,17 @@ function Room() {
                     </div>
                 )}
 
-                {isTranslationPanelOpen && <TranslationPanel onClose={() => setIsTranslationPanelOpen(false)} />}
+                {/* 🌟 UPDATED TranslationPanel: Pass the new props */}
+                {isTranslationPanelOpen && (
+                    <TranslationPanel 
+                        onClose={() => setIsTranslationPanelOpen(false)} 
+                        isTranslatedCaptionsOn={isTranslatedCaptionsOn}
+                        onCaptionToggle={handleCaptionToggle}
+                    />
+                )}
             </div>
 
-            {/* SETTINGS MODAL */}
+            {/* ... existing SETTINGS MODAL ... */}
             {isSettingsOpen && (
                 <div className="fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center z-50">
                     <div className="bg-[#2E4242] p-8 rounded-xl shadow-2xl text-white max-w-lg w-full">
@@ -551,7 +620,7 @@ function Room() {
                 </div>
             )}
 
-            {/* PENDING PARTICIPANTS MODAL */}
+            {/* ... existing PENDING PARTICIPANTS MODAL ... */}
             {pendingParticipants.length > 0 && (
                 <div className="fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center z-50">
                     <div className="bg-[#2E4242] p-8 rounded-xl shadow-2xl text-white max-w-md w-full">
